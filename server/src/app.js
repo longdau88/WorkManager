@@ -6,6 +6,7 @@ import { fileURLToPath } from 'url';
 import { env } from './config/env.js';
 import apiRoutes from './routes/index.js';
 import { errorHandler, notFoundHandler } from './middlewares/errorHandler.js';
+import { initDatabase } from './config/db.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -17,6 +18,25 @@ app.use(cors({ origin: env.clientUrl, credentials: true }));
 app.use(morgan(env.nodeEnv === 'development' ? 'dev' : 'combined'));
 app.use(express.json({ limit: `${env.maxUploadMb + 5}mb` }));
 app.use(express.urlencoded({ extended: true, limit: `${env.maxUploadMb + 5}mb` }));
+
+// Auto-initialize database on cold start before processing any API request
+let dbInitPromise = null;
+app.use(async (req, res, next) => {
+  if (req.path.startsWith('/api')) {
+    if (!dbInitPromise) {
+      dbInitPromise = initDatabase().catch(err => {
+        console.error('Database connection/initialization error:', err);
+        return { isPrisma: false, prisma: null };
+      });
+    }
+    try {
+      await dbInitPromise;
+    } catch (err) {
+      console.error('Unhandled dbInit error:', err);
+    }
+  }
+  next();
+});
 
 // Serve Uploaded Files
 app.use('/uploads', express.static(env.uploadDir));

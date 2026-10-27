@@ -3,14 +3,23 @@ import path from 'path';
 import multer from 'multer';
 import { env } from '../config/env.js';
 
-// Ensure upload directory exists
-if (!fs.existsSync(env.uploadDir)) {
-  fs.mkdirSync(env.uploadDir, { recursive: true });
+// Ensure upload directory exists safely
+try {
+  if (!fs.existsSync(env.uploadDir)) {
+    fs.mkdirSync(env.uploadDir, { recursive: true });
+  }
+} catch (err) {
+  console.warn('⚠️ Could not create upload directory:', err.message);
 }
 
 // Multer storage configuration
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
+    try {
+      if (!fs.existsSync(env.uploadDir)) {
+        fs.mkdirSync(env.uploadDir, { recursive: true });
+      }
+    } catch (e) {}
     cb(null, env.uploadDir);
   },
   filename: (req, file, cb) => {
