@@ -91,7 +91,7 @@ export const userService = {
     }
 
     // Do not allow deactivating the main admin user
-    if (user.username === 'admin' && data.isActive === false) {
+    if (user.username === 'admin' && data.isActive === false && user.isActive !== false) {
       const err = new Error('Không thể khóa tài khoản quản trị viên mặc định (admin)');
       err.statusCode = 400;
       throw err;
@@ -102,10 +102,10 @@ export const userService = {
     if (data.email !== undefined) updatePayload.email = data.email.toLowerCase();
     if (data.unit !== undefined) updatePayload.unit = data.unit;
     if (data.phone !== undefined) updatePayload.phone = data.phone;
-    if (data.roleId !== undefined) {
+    if (data.roleId !== undefined && data.roleId !== user.roleId) {
       // Do not allow changing role of default admin
       if (user.username === 'admin') {
-        const err = new Error('Không thể đổi vai trò của tài khoản quản trị viên mặc định');
+        const err = new Error('Không thể đổi vai trò của tài khoản quản trị viên mặc định (admin luôn giữ vai trò Admin)');
         err.statusCode = 400;
         throw err;
       }

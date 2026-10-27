@@ -813,6 +813,9 @@ export const modals = {
       document.getElementById('u_password').placeholder = 'Bỏ trống nếu giữ nguyên mật khẩu';
       document.getElementById('u_role').value = user.roleId;
       document.getElementById('u_isactive').checked = user.isActive;
+      const isAdminUser = user.username === 'admin';
+      document.getElementById('u_role').disabled = isAdminUser;
+      document.getElementById('u_isactive').disabled = isAdminUser;
 
       document.getElementById('btnSaveUser').textContent = 'Lưu thay đổi';
       document.getElementById('btnCancelUser').style.display = '';
@@ -826,6 +829,8 @@ export const modals = {
     editUserId = null;
     document.getElementById('u_username').value = '';
     document.getElementById('u_username').disabled = false;
+    document.getElementById('u_role').disabled = false;
+    document.getElementById('u_isactive').disabled = false;
     document.getElementById('u_fullname').value = '';
     document.getElementById('u_email').value = '';
     if (document.getElementById('u_unit')) document.getElementById('u_unit').value = '';
