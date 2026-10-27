@@ -1,9 +1,11 @@
+import express from 'express';
 import app from './server/src/app.js';
 import { initDatabase } from './server/src/config/db.js';
 
 let isDbInitialized = false;
 
-async function ensureDatabase() {
+// Middleware to ensure database is initialized on serverless request
+app.use(async (req, res, next) => {
   if (!isDbInitialized) {
     try {
       await initDatabase();
@@ -12,20 +14,15 @@ async function ensureDatabase() {
       console.error('Vercel DB Init Error:', err);
     }
   }
-}
-
-// Default export for Vercel Express Framework Preset & Serverless
-export default async function handler(req, res) {
-  await ensureDatabase();
-  return app(req, res);
-}
+  next();
+});
 
 // Local standalone support
 if (process.env.NODE_ENV !== 'production' && !process.env.VERCEL) {
   const PORT = process.env.PORT || 5000;
-  ensureDatabase().then(() => {
-    app.listen(PORT, () => {
-      console.log(`WorkManager running on http://localhost:${PORT}`);
-    });
+  app.listen(PORT, () => {
+    console.log(`WorkManager running on http://localhost:${PORT}`);
   });
 }
+
+export default app;
