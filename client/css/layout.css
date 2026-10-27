@@ -634,6 +634,20 @@ main {
     max-width: 100% !important;
   }
 
+  /* Settings Modal on Tablet */
+  .modal.modal-settings {
+    padding: 0 !important;
+    max-height: calc(100dvh - 32px) !important;
+  }
+
+  .modal-settings .modal-body {
+    padding: 16px 18px !important;
+  }
+
+  .modal-settings .form-grid-users {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+
   /* Stats Cards */
   .cards {
     grid-template-columns: repeat(2, 1fr);
@@ -777,10 +791,92 @@ main {
     font-size: 13px;
   }
 
-  #modalSettings .tabs {
+  /* Settings Modal on Mobile (Pinned Header/Footer, Safe Viewport Box) */
+  #modalSettings.modal-bg {
+    padding: 8px;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .modal.modal-settings {
+    border-radius: var(--radius-xl) !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    max-height: calc(100dvh - 16px) !important;
+    padding: 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    overflow: hidden !important;
+  }
+
+  .modal-settings .modal-header {
+    padding: 12px 14px 8px !important;
+    gap: 8px !important;
+  }
+
+  .modal-settings .modal-header-top h2 {
+    font-size: 15px !important;
+  }
+
+  .modal-settings .modal-body {
+    padding: 12px 14px !important;
+  }
+
+  .modal-settings .modal-footer {
+    padding: 10px 14px !important;
+  }
+
+  .modal-settings .modal-footer .btn {
+    width: 100%;
+    padding: 10px;
+    font-size: 13px;
+  }
+
+  .modal-settings .settings-card {
+    padding: 12px !important;
+    margin-bottom: 12px !important;
+  }
+
+  .modal-settings .form-grid-users {
+    grid-template-columns: 1fr !important;
+    gap: 8px !important;
+  }
+
+  .modal-settings .form-grid-roles {
+    grid-template-columns: 1fr !important;
+    gap: 8px !important;
+  }
+
+  .modal-settings .perm-grid-container {
+    grid-template-columns: 1fr !important;
+    max-height: 190px !important;
+    gap: 6px !important;
+    padding: 6px !important;
+  }
+
+  .modal-settings .perm-card {
+    padding: 8px 10px !important;
+    gap: 8px !important;
+  }
+
+  .modal-settings .perm-card-label {
+    font-size: 12px !important;
+  }
+
+  .modal-settings .settings-form-actions {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 8px !important;
+  }
+
+  .modal-settings .settings-form-actions .btn {
+    width: 100% !important;
+  }
+
+  #modalSettings .settings-tabs-scroll {
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
-    padding-bottom: 6px;
+    padding-bottom: 4px;
     white-space: nowrap;
   }
 

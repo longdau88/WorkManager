@@ -888,17 +888,36 @@ export const modals = {
     wrap.innerHTML = '<div class="small" style="padding:16px;text-align:center">⏳ Đang tải danh sách vai trò…</div>';
 
     try {
-      const [roles, perms] = await Promise.all([api.getRoles(), api.getSystemPermissions()]);
+      let roles = [];
+      let perms = [];
+      try {
+        [roles, perms] = await Promise.all([api.getRoles(), api.getSystemPermissions()]);
+      } catch (loadErr) {
+        try { perms = await api.getSystemPermissions(); } catch (_) { perms = cachedPermissions || []; }
+        try { roles = await api.getRoles(); } catch (_) { roles = cachedRoles || []; }
+      }
+
       cachedRoles = roles || [];
-      cachedPermissions = perms || [];
+      cachedPermissions = (perms && perms.length) ? perms : (cachedPermissions.length ? cachedPermissions : [
+        { id: 'manage_users', label: 'Quản lý tài khoản (Thêm/Sửa/Khóa người dùng)' },
+        { id: 'manage_roles', label: 'Quản lý vai trò & Phân quyền hệ thống' },
+        { id: 'create_project', label: 'Tạo dự án mới' },
+        { id: 'delete_project', label: 'Xóa dự án' },
+        { id: 'edit_all_projects', label: 'Toàn quyền chỉnh sửa mọi dự án' },
+        { id: 'manage_project_permissions', label: 'Phân quyền người dùng cho từng dự án' },
+        { id: 'export_stats', label: 'Xem & Xuất báo cáo thống kê' }
+      ]);
 
       // Render Permissions Checkboxes in form
       const permCheckWrap = document.getElementById('rolePermCheckboxes');
       if (permCheckWrap) {
         permCheckWrap.innerHTML = cachedPermissions.map(p => `
-          <label style="display:flex;align-items:center;gap:6px;font-size:var(--font-sm);cursor:pointer;margin-bottom:6px">
-            <input type="checkbox" value="${p.id}" class="role-perm-chk" style="width:auto;margin:0">
-            <span><b>${state.esc(p.id)}</b>: ${state.esc(p.label)}</span>
+          <label class="perm-card" title="${state.esc(p.label)} (${state.esc(p.id)})">
+            <input type="checkbox" value="${p.id}" class="role-perm-chk">
+            <div class="perm-card-body">
+              <span class="perm-card-label">${state.esc(p.label)}</span>
+              <code class="perm-card-key">${state.esc(p.id)}</code>
+            </div>
           </label>
         `).join('');
       }

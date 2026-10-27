@@ -232,94 +232,108 @@
 
   <!-- ================= MODAL: SETTINGS (CÀI ĐẶT) ================= -->
   <div class="modal-bg" id="modalSettings" onclick="if(event.target===this)window.app.closeSettingsModal()">
-    <div class="modal wide" role="dialog" aria-labelledby="settingsModalTitle">
-      <h2 id="settingsModalTitle">⚙ Cài đặt hệ thống</h2>
-
-      <div class="tabs" style="margin-bottom:14px">
-        <span class="tab active" id="tabSetUsers" onclick="window.app.switchSettingsTab('users')">👤 Tài khoản</span>
-        <span class="tab" id="tabSetRoles" onclick="window.app.switchSettingsTab('roles')">🛡️ Vai trò & Phân quyền</span>
-        <span class="tab" id="tabSetFields" onclick="window.app.switchSettingsTab('fields')">🧾 Trường thông tin dự án</span>
-      </div>
-
-      <!-- Tab 1: Quản lý Tài khoản (Users) -->
-      <div id="paneSetUsers">
-        <div class="small" style="color:var(--text-muted);margin-bottom:10px">Quản lý danh sách tài khoản đăng nhập vào hệ thống, thông tin đơn vị, gán vai trò quyền hạn và kích hoạt/khóa tài khoản.</div>
-        <div style="background:var(--bg-card);border:1px solid var(--border-light);border-radius:var(--radius-lg);padding:14px;margin-bottom:14px">
-          <div class="form-grid-users">
-            <div class="field" style="margin-bottom:0">
-              <label for="u_username" style="font-size:11px">Tên đăng nhập *</label>
-              <input id="u_username" placeholder="Username (viết liền)">
-            </div>
-            <div class="field" style="margin-bottom:0">
-              <label for="u_fullname" style="font-size:11px">Họ và tên</label>
-              <input id="u_fullname" placeholder="Họ tên đầy đủ">
-            </div>
-            <div class="field" style="margin-bottom:0">
-              <label for="u_email" style="font-size:11px">Email *</label>
-              <input id="u_email" placeholder="Email liên hệ" type="email">
-            </div>
-            <div class="field" style="margin-bottom:0">
-              <label for="u_unit" style="font-size:11px">Đơn vị / Chức vụ</label>
-              <input id="u_unit" placeholder="VD: Phòng Kỹ thuật">
-            </div>
-            <div class="field" style="margin-bottom:0">
-              <label for="u_phone" style="font-size:11px">Số điện thoại</label>
-              <input id="u_phone" placeholder="Số điện thoại">
-            </div>
-            <div class="field" style="margin-bottom:0">
-              <label for="u_password" style="font-size:11px">Mật khẩu *</label>
-              <input id="u_password" placeholder="Mật khẩu" type="password">
-            </div>
-            <div class="field" style="margin-bottom:0">
-              <label for="u_role" style="font-size:11px">Vai trò</label>
-              <select id="u_role"></select>
-            </div>
-          </div>
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-top:6px">
-            <label style="display:inline-flex;align-items:center;gap:6px;font-size:var(--font-sm);cursor:pointer">
-              <input type="checkbox" id="u_isactive" checked style="width:auto;margin:0"> Kích hoạt tài khoản
-            </label>
-            <div style="display:flex;gap:6px">
-              <button class="btn primary" id="btnSaveUser" onclick="window.app.saveUser()">+ Thêm tài khoản</button>
-              <button class="btn" id="btnCancelUser" style="display:none" onclick="window.app.cancelUserEdit()">Huỷ</button>
-            </div>
-          </div>
+    <div class="modal wide modal-settings" role="dialog" aria-labelledby="settingsModalTitle">
+      <div class="modal-header">
+        <div class="modal-header-top">
+          <h2 id="settingsModalTitle">
+            <span class="settings-modal-icon">⚙</span>
+            <span>Cài đặt hệ thống</span>
+          </h2>
+          <button class="modal-close-icon" onclick="window.app.closeSettingsModal()" aria-label="Đóng popup" title="Đóng">✕</button>
         </div>
-        <div id="usersTableWrap"></div>
-      </div>
-
-      <!-- Tab 4: Vai trò & Phân quyền (Roles) -->
-      <div id="paneSetRoles" style="display:none">
-        <div class="small" style="color:var(--text-muted);margin-bottom:10px">Tùy biến các vai trò (roles) trong hệ thống và phân quyền chi tiết cho từng vai trò.</div>
-        <div style="background:var(--bg-card);border:1px solid var(--border-light);border-radius:var(--radius-lg);padding:14px;margin-bottom:14px">
-          <div class="form-grid-2col">
-            <div class="field" style="margin-bottom:0">
-              <label for="r_name" style="font-size:11px">Mã vai trò (Key) *</label>
-              <input id="r_name" placeholder="Ví dụ: manager, lead, reviewer…">
-            </div>
-            <div class="field" style="margin-bottom:0">
-              <label for="r_display" style="font-size:11px">Tên hiển thị *</label>
-              <input id="r_display" placeholder="Ví dụ: Quản lý dự án">
-            </div>
-          </div>
-          <div class="field" style="margin-bottom:10px">
-            <label for="r_desc" style="font-size:11px">Mô tả vai trò</label>
-            <input id="r_desc" placeholder="Mô tả chức năng hoặc phạm vi công việc…">
-          </div>
-          <div class="field" style="margin-bottom:10px">
-            <label style="font-size:12px;font-weight:600;margin-bottom:6px;display:block">Danh sách quyền hệ thống cấp cho vai trò:</label>
-            <div id="rolePermCheckboxes" style="display:grid;grid-template-columns:repeat(auto-fit, minmax(240px, 1fr));gap:6px;max-height:160px;overflow-y:auto;padding:8px;background:var(--bg-surface);border:1px solid var(--border-light);border-radius:var(--radius-md)"></div>
-          </div>
-          <div style="display:flex;gap:6px">
-            <button class="btn primary" id="btnSaveRole" onclick="window.app.saveRole()">+ Thêm vai trò</button>
-            <button class="btn" id="btnCancelRole" style="display:none" onclick="window.app.cancelRoleEdit()">Huỷ</button>
-          </div>
+        <div class="tabs settings-tabs-scroll">
+          <span class="tab active" id="tabSetUsers" onclick="window.app.switchSettingsTab('users')">👤 Tài khoản</span>
+          <span class="tab" id="tabSetRoles" onclick="window.app.switchSettingsTab('roles')">🛡️ Vai trò & Phân quyền</span>
+          <span class="tab" id="tabSetFields" onclick="window.app.switchSettingsTab('fields')">🧾 Trường thông tin dự án</span>
         </div>
-        <div id="rolesTableWrap"></div>
       </div>
 
-      <div class="modal-actions">
-        <span style="flex:1"></span>
+      <div class="modal-body">
+        <!-- Tab 1: Quản lý Tài khoản (Users) -->
+        <div id="paneSetUsers">
+          <div class="settings-pane-desc">Quản lý danh sách tài khoản đăng nhập vào hệ thống, thông tin đơn vị, gán vai trò quyền hạn và kích hoạt/khóa tài khoản.</div>
+          <div class="settings-card">
+            <div class="form-grid-users">
+              <div class="field" style="margin-bottom:0">
+                <label for="u_username">Tên đăng nhập *</label>
+                <input id="u_username" placeholder="Username (viết liền)">
+              </div>
+              <div class="field" style="margin-bottom:0">
+                <label for="u_fullname">Họ và tên</label>
+                <input id="u_fullname" placeholder="Họ tên đầy đủ">
+              </div>
+              <div class="field" style="margin-bottom:0">
+                <label for="u_email">Email *</label>
+                <input id="u_email" placeholder="Email liên hệ" type="email">
+              </div>
+              <div class="field" style="margin-bottom:0">
+                <label for="u_unit">Đơn vị / Chức vụ</label>
+                <input id="u_unit" placeholder="VD: Phòng Kỹ thuật">
+              </div>
+              <div class="field" style="margin-bottom:0">
+                <label for="u_phone">Số điện thoại</label>
+                <input id="u_phone" placeholder="Số điện thoại">
+              </div>
+              <div class="field" style="margin-bottom:0">
+                <label for="u_password">Mật khẩu *</label>
+                <input id="u_password" placeholder="Mật khẩu" type="password">
+              </div>
+              <div class="field" style="margin-bottom:0">
+                <label for="u_role">Vai trò</label>
+                <select id="u_role"></select>
+              </div>
+            </div>
+            <div class="settings-form-actions">
+              <label class="settings-toggle-label">
+                <input type="checkbox" id="u_isactive" checked style="width:auto;margin:0"> Kích hoạt tài khoản
+              </label>
+              <div style="display:flex;gap:8px">
+                <button class="btn primary" id="btnSaveUser" onclick="window.app.saveUser()">+ Thêm tài khoản</button>
+                <button class="btn" id="btnCancelUser" style="display:none" onclick="window.app.cancelUserEdit()">Huỷ</button>
+              </div>
+            </div>
+          </div>
+          <div id="usersTableWrap"></div>
+        </div>
+
+        <!-- Tab 2: Vai trò & Phân quyền (Roles) -->
+        <div id="paneSetRoles" style="display:none">
+          <div class="settings-pane-desc">Tùy biến các vai trò (roles) trong hệ thống và phân quyền chi tiết cho từng vai trò.</div>
+          <div class="settings-card">
+            <div class="form-grid-roles">
+              <div class="field" style="margin-bottom:0">
+                <label for="r_name">Mã vai trò (Key) *</label>
+                <input id="r_name" placeholder="Ví dụ: manager, lead, reviewer…">
+              </div>
+              <div class="field" style="margin-bottom:0">
+                <label for="r_display">Tên hiển thị *</label>
+                <input id="r_display" placeholder="Ví dụ: Quản lý dự án">
+              </div>
+            </div>
+            <div class="field" style="margin-top:10px;margin-bottom:12px">
+              <label for="r_desc">Mô tả vai trò</label>
+              <input id="r_desc" placeholder="Mô tả chức năng hoặc phạm vi công việc…">
+            </div>
+            <div class="field" style="margin-bottom:12px">
+              <label class="perm-section-title">Danh sách quyền hệ thống cấp cho vai trò:</label>
+              <div id="rolePermCheckboxes" class="perm-grid-container"></div>
+            </div>
+            <div style="display:flex;gap:8px">
+              <button class="btn primary" id="btnSaveRole" onclick="window.app.saveRole()">+ Thêm vai trò</button>
+              <button class="btn" id="btnCancelRole" style="display:none" onclick="window.app.cancelRoleEdit()">Huỷ</button>
+            </div>
+          </div>
+          <div id="rolesTableWrap"></div>
+        </div>
+
+        <!-- Tab 3: Trường thông tin dự án (Fields) -->
+        <div id="paneSetFields" style="display:none">
+          <div class="settings-pane-desc">Các trường này tự động xuất hiện trong phần Thông tin khai báo của mọi dự án. Trường kiểu Số được cộng tổng trong Thống kê; kiểu Lựa chọn được đếm số lượng.</div>
+          <div id="fieldsTableWrap"></div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
         <button class="btn" onclick="window.app.closeSettingsModal()">Đóng</button>
       </div>
     </div>

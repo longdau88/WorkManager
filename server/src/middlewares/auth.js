@@ -31,13 +31,24 @@ export async function authenticate(req, res, next) {
 
     let user = null;
     if (isPrismaConnected && prisma) {
-      user = await prisma.user.findUnique({
-        where: { id: decoded.userId },
-        include: {
-          role: true,
-          projectPermissions: true
+      try {
+        user = await prisma.user.findUnique({
+          where: { id: decoded.userId },
+          include: {
+            role: true,
+            projectPermissions: true
+          }
+        });
+      } catch (dbErr) {
+        console.warn('Prisma auth query failed, attempting fallback data store:', dbErr.message);
+        const data = readFallbackData();
+        const u = (data.users || []).find(x => x.id === decoded.userId);
+        if (u) {
+          const r = (data.roles || []).find(x => x.id === u.roleId);
+          const pp = (data.projectPermissions || []).filter(x => x.userId === u.id);
+          user = { ...u, role: r, projectPermissions: pp };
         }
-      });
+      }
     } else {
       const data = readFallbackData();
       const u = (data.users || []).find(x => x.id === decoded.userId);
