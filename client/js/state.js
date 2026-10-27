@@ -3,7 +3,7 @@ import { api } from './api.js';
 
 export class StateManager {
   constructor() {
-    this.data = { projects: [], tasks: [], members: [], fields: [] };
+    this.data = { projects: [], tasks: [], users: [], fields: [] };
     this.queue = [];
     this.syncing = false;
     this.syncErr = '';
@@ -44,7 +44,7 @@ export class StateManager {
   }
 
   normalize() {
-    ['projects', 'tasks', 'members', 'fields'].forEach(k => {
+    ['projects', 'tasks', 'users', 'fields'].forEach(k => {
       if (!Array.isArray(this.data[k])) this.data[k] = [];
     });
     this.data.projects.forEach(p => {
@@ -162,7 +162,22 @@ export class StateManager {
 
   memberBy(email) {
     if (!email) return null;
-    return this.data.members.find(m => String(m.email || '').toLowerCase() === String(email).toLowerCase()) || null;
+    const lower = String(email).trim().toLowerCase();
+    const u = (this.data.users || []).find(x => 
+      String(x.email || '').toLowerCase() === lower || 
+      String(x.username || '').toLowerCase() === lower
+    );
+    if (u) {
+      return {
+        id: u.id,
+        name: u.fullName || u.username,
+        fullName: u.fullName || u.username,
+        email: u.email,
+        unit: u.unit || '',
+        phone: u.phone || ''
+      };
+    }
+    return null;
   }
 
   shortName(email) {
@@ -303,7 +318,7 @@ export class StateManager {
         this.data = {
           projects: res.projects || [],
           tasks: res.tasks || [],
-          members: res.members || [],
+          users: res.users || [],
           fields: res.fields || []
         };
         // Re-apply remaining queue if any were added during sync

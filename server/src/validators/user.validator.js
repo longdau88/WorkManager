@@ -5,6 +5,8 @@ export const createUserSchema = z.object({
   email: z.string().email('Email không đúng định dạng'),
   password: z.string().min(6, 'Mật khẩu phải có tối thiểu 6 ký tự'),
   fullName: z.string().optional().nullable(),
+  unit: z.string().optional().nullable(),
+  phone: z.string().optional().nullable(),
   roleId: z.string().min(1, 'Vui lòng chọn vai trò'),
   isActive: z.boolean().default(true)
 });
@@ -14,6 +16,9 @@ export const updateUserSchema = z.object({
   email: z.string().email().optional(),
   password: z.string().min(6).optional().nullable(),
   fullName: z.string().optional().nullable(),
+  unit: z.string().optional().nullable(),
+  phone: z.string().optional().nullable(),
   roleId: z.string().min(1).optional(),
   isActive: z.boolean().optional()
 });
+

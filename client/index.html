@@ -236,38 +236,14 @@
       <h2 id="settingsModalTitle">⚙ Cài đặt hệ thống</h2>
 
       <div class="tabs" style="margin-bottom:14px">
-        <span class="tab active" id="tabSetMembers" onclick="window.app.switchSettingsTab('members')">👥 Thành viên</span>
+        <span class="tab active" id="tabSetUsers" onclick="window.app.switchSettingsTab('users')">👤 Tài khoản</span>
+        <span class="tab" id="tabSetRoles" onclick="window.app.switchSettingsTab('roles')">🛡️ Vai trò & Phân quyền</span>
         <span class="tab" id="tabSetFields" onclick="window.app.switchSettingsTab('fields')">🧾 Trường thông tin dự án</span>
-        <span class="tab" id="tabSetUsers" style="display:none" onclick="window.app.switchSettingsTab('users')">👤 Tài khoản</span>
-        <span class="tab" id="tabSetRoles" style="display:none" onclick="window.app.switchSettingsTab('roles')">🛡️ Vai trò & Phân quyền</span>
       </div>
 
-      <!-- Tab 1: Thành viên -->
-      <div id="paneSetMembers">
-        <div class="small" style="color:var(--text-muted);margin-bottom:10px">Khai báo danh sách người giao và người nhận việc. Tên ngắn hiển thị trên danh sách, email dùng để xác định danh tính.</div>
-        <div class="form-grid-members">
-          <input id="m_name" placeholder="Tên ngắn * (VD: Nam)">
-          <input id="m_fullname" placeholder="Họ tên đầy đủ">
-          <input id="m_email" placeholder="Email *" type="email">
-          <input id="m_unit" placeholder="Đơn vị / Chức vụ">
-          <input id="m_phone" placeholder="Số điện thoại">
-          <div style="display:flex;gap:6px">
-            <button class="btn primary" id="btnSaveMember" onclick="window.app.saveMember()">+ Thêm</button>
-            <button class="btn" id="btnCancelMember" style="display:none" onclick="window.app.cancelMemberEdit()">Huỷ</button>
-          </div>
-        </div>
-        <div id="membersTableWrap"></div>
-      </div>
-
-      <!-- Tab 2: Trường thông tin -->
-      <div id="paneSetFields" style="display:none">
-        <div class="small" style="color:var(--text-muted);margin-bottom:10px">Các trường này tự động xuất hiện trong phần Thông tin khai báo của mọi dự án. Trường kiểu Số được cộng tổng trong Thống kê; kiểu Lựa chọn được đếm số lượng.</div>
-        <div id="fieldsTableWrap"></div>
-      </div>
-
-      <!-- Tab 3: Quản lý Tài khoản (Users) -->
-      <div id="paneSetUsers" style="display:none">
-        <div class="small" style="color:var(--text-muted);margin-bottom:10px">Quản lý danh sách tài khoản đăng nhập vào hệ thống, gán vai trò quyền hạn và kích hoạt/khóa tài khoản.</div>
+      <!-- Tab 1: Quản lý Tài khoản (Users) -->
+      <div id="paneSetUsers">
+        <div class="small" style="color:var(--text-muted);margin-bottom:10px">Quản lý danh sách tài khoản đăng nhập vào hệ thống, thông tin đơn vị, gán vai trò quyền hạn và kích hoạt/khóa tài khoản.</div>
         <div style="background:var(--bg-card);border:1px solid var(--border-light);border-radius:var(--radius-lg);padding:14px;margin-bottom:14px">
           <div class="form-grid-users">
             <div class="field" style="margin-bottom:0">
@@ -281,6 +257,14 @@
             <div class="field" style="margin-bottom:0">
               <label for="u_email" style="font-size:11px">Email *</label>
               <input id="u_email" placeholder="Email liên hệ" type="email">
+            </div>
+            <div class="field" style="margin-bottom:0">
+              <label for="u_unit" style="font-size:11px">Đơn vị / Chức vụ</label>
+              <input id="u_unit" placeholder="VD: Phòng Kỹ thuật">
+            </div>
+            <div class="field" style="margin-bottom:0">
+              <label for="u_phone" style="font-size:11px">Số điện thoại</label>
+              <input id="u_phone" placeholder="Số điện thoại">
             </div>
             <div class="field" style="margin-bottom:0">
               <label for="u_password" style="font-size:11px">Mật khẩu *</label>

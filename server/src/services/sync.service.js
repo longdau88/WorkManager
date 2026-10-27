@@ -1,6 +1,6 @@
 import { projectRepository } from '../repositories/project.repository.js';
 import { taskRepository } from '../repositories/task.repository.js';
-import { memberRepository } from '../repositories/member.repository.js';
+import { userRepository } from '../repositories/user.repository.js';
 import { fieldRepository } from '../repositories/field.repository.js';
 
 export const syncService = {
@@ -8,10 +8,10 @@ export const syncService = {
     const isAdmin = !user || user.isAdmin || (user.permissions || []).includes('edit_all_projects');
     const userId = user ? user.id : null;
 
-    const [projects, tasks, members, fields] = await Promise.all([
+    const [projects, tasks, rawUsers, fields] = await Promise.all([
       projectRepository.findAll({ includeDeleted: false, userId, isAdmin }),
       taskRepository.findAll({ includeDeleted: false }),
-      memberRepository.findAll({ includeDeleted: false }),
+      userRepository.findAll(),
       fieldRepository.findAll({ includeDeleted: false })
     ]);
 
@@ -19,12 +19,33 @@ export const syncService = {
     const allowedProjectIds = new Set(projects.map(p => p.id));
     const filteredTasks = isAdmin ? tasks : tasks.filter(t => !t.projectId || allowedProjectIds.has(t.projectId));
 
+    const safeUsers = (rawUsers || []).map(u => ({
+      id: u.id,
+      username: u.username,
+      email: u.email,
+      fullName: u.fullName || '',
+      unit: u.unit || '',
+      phone: u.phone || '',
+      roleId: u.roleId,
+      role: u.role,
+      isActive: u.isActive
+    }));
+
     return {
       serverTime: Date.now(),
       currentUser: user,
       projects,
       tasks: filteredTasks,
-      members,
+      users: safeUsers,
+      members: safeUsers.map(u => ({
+        id: u.id,
+        name: u.fullName || u.username,
+        fullName: u.fullName || u.username,
+        email: u.email,
+        unit: u.unit || '',
+        phone: u.phone || '',
+        deleted: false
+      })),
       fields
     };
   },
@@ -44,9 +65,6 @@ export const syncService = {
         case 'task':
           await taskRepository.upsert(record);
           break;
-        case 'member':
-          await memberRepository.upsert(record);
-          break;
         case 'field':
           await fieldRepository.upsert(record);
           break;
@@ -59,3 +77,4 @@ export const syncService = {
     return await this.getBootstrapData(user);
   }
 };
+

@@ -26,10 +26,13 @@ export const modals = {
 
     this.fillFolders(t ? t.folderId : (folderId && folderId !== '__none' ? folderId : ''));
 
-    // Fill Assigners and Assignees
-    const memberOpts = state.data.members.map(m =>
-      `<option value="${state.esc(String(m.email).toLowerCase())}">${state.esc(m.name)}${m.unit ? ' – ' + state.esc(m.unit) : ''}</option>`
-    ).join('');
+    // Fill Assigners and Assignees from Users
+    const userList = (state.data.users || []).filter(u => u.isActive !== false);
+    const userOpts = userList.map(u => {
+      const displayName = u.fullName ? `${u.fullName} (${u.username})` : u.username;
+      const unitStr = u.unit ? ` – ${u.unit}` : '';
+      return `<option value="${state.esc(String(u.email).toLowerCase())}">${state.esc(displayName + unitStr)}</option>`;
+    }).join('');
 
     const userEmail = api.userEmail;
     const meOpt = userEmail && !state.memberBy(userEmail) ? `<option value="${state.esc(userEmail)}">Tôi (${state.esc(userEmail)})</option>` : '';
@@ -37,8 +40,8 @@ export const modals = {
     const assignerSel = document.getElementById('t_assigner');
     const assigneeSel = document.getElementById('t_assignee');
 
-    assignerSel.innerHTML = '<option value="">— Người giao —</option>' + meOpt + memberOpts;
-    assigneeSel.innerHTML = '<option value="">— Chưa giao —</option>' + memberOpts;
+    assignerSel.innerHTML = '<option value="">— Người giao —</option>' + meOpt + userOpts;
+    assigneeSel.innerHTML = '<option value="">— Chưa giao —</option>' + userOpts;
 
     ensureSelectOption(assignerSel, t && t.assigner);
     ensureSelectOption(assigneeSel, t && t.assignee);
@@ -479,7 +482,7 @@ export const modals = {
   },
 
   // ================= SETTINGS MODAL =================
-  openSettings(tab = 'members') {
+  openSettings(tab = null) {
     const isManageUsers = api.currentUser?.isAdmin || (api.currentUser?.permissions || []).includes('manage_users');
     const isManageRoles = api.currentUser?.isAdmin || (api.currentUser?.permissions || []).includes('manage_roles');
 
@@ -488,130 +491,35 @@ export const modals = {
     if (tabUsersEl) tabUsersEl.style.display = isManageUsers ? '' : 'none';
     if (tabRolesEl) tabRolesEl.style.display = isManageRoles ? '' : 'none';
 
-    this.switchSettingsTab(tab);
+    let targetTab = tab;
+    if (!targetTab) {
+      targetTab = isManageUsers ? 'users' : 'fields';
+    }
+
+    this.switchSettingsTab(targetTab);
     openModalEl('modalSettings');
   },
 
   switchSettingsTab(tab) {
-    document.getElementById('tabSetMembers').classList.toggle('active', tab === 'members');
-    document.getElementById('tabSetFields').classList.toggle('active', tab === 'fields');
     const tabUsersEl = document.getElementById('tabSetUsers');
     const tabRolesEl = document.getElementById('tabSetRoles');
+    const tabFieldsEl = document.getElementById('tabSetFields');
+
     if (tabUsersEl) tabUsersEl.classList.toggle('active', tab === 'users');
     if (tabRolesEl) tabRolesEl.classList.toggle('active', tab === 'roles');
+    if (tabFieldsEl) tabFieldsEl.classList.toggle('active', tab === 'fields');
 
-    document.getElementById('paneSetMembers').style.display = tab === 'members' ? '' : 'none';
-    document.getElementById('paneSetFields').style.display = tab === 'fields' ? '' : 'none';
     const paneUsersEl = document.getElementById('paneSetUsers');
     const paneRolesEl = document.getElementById('paneSetRoles');
+    const paneFieldsEl = document.getElementById('paneSetFields');
+
     if (paneUsersEl) paneUsersEl.style.display = tab === 'users' ? '' : 'none';
     if (paneRolesEl) paneRolesEl.style.display = tab === 'roles' ? '' : 'none';
+    if (paneFieldsEl) paneFieldsEl.style.display = tab === 'fields' ? '' : 'none';
 
-    if (tab === 'members') this.renderMembersTab();
-    else if (tab === 'fields') this.renderFieldsTab();
-    else if (tab === 'users') this.renderUsersTab();
+    if (tab === 'users') this.renderUsersTab();
     else if (tab === 'roles') this.renderRolesTab();
-  },
-
-  renderMembersTab() {
-    const container = document.getElementById('membersTableWrap');
-    if (!container) return;
-
-    const ms = [...state.data.members].sort((a, b) => String(a.name || '').localeCompare(String(b.name || ''), 'vi'));
-    const cnt = email => state.data.tasks.filter(t => String(t.assignee || '').toLowerCase() === String(email || '').toLowerCase() && t.status !== 'done').length;
-
-    container.innerHTML = ms.length ? `
-      <div class="tbl-wrap">
-        <table class="tbl">
-          <thead>
-            <tr>
-              <th>Tên ngắn</th>
-              <th>Họ tên</th>
-              <th>Email</th>
-              <th>Đơn vị / Chức vụ</th>
-              <th>SĐT</th>
-              <th class="num">Việc đang giữ</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            ${ms.map(m => `
-              <tr>
-                <td><b>${state.esc(m.name)}</b></td>
-                <td>${state.esc(m.fullName || '')}</td>
-                <td>${state.esc(m.email)}</td>
-                <td>${state.esc(m.unit || '')}</td>
-                <td>${state.esc(m.phone || '')}</td>
-                <td class="num">${cnt(m.email)}</td>
-                <td style="white-space:nowrap;text-align:right">
-                  <button class="ibtn" title="Sửa" onclick="window.app.editMember('${m.id}')">✎</button>
-                  <button class="ibtn" title="Xoá" onclick="window.app.deleteMember('${m.id}')">✕</button>
-                </td>
-              </tr>
-            `).join('')}
-          </tbody>
-        </table>
-      </div>
-    ` : '<div class="empty-state">Chưa có thành viên nào.</div>';
-  },
-
-  editMember(id) {
-    const m = state.data.members.find(x => x.id === id);
-    if (!m) return;
-    editMemberId = id;
-    document.getElementById('m_name').value = m.name || '';
-    document.getElementById('m_fullname').value = m.fullName || '';
-    document.getElementById('m_email').value = m.email || '';
-    document.getElementById('m_unit').value = m.unit || '';
-    document.getElementById('m_phone').value = m.phone || '';
-    document.getElementById('btnSaveMember').textContent = 'Lưu';
-    document.getElementById('btnCancelMember').style.display = '';
-    document.getElementById('m_name').focus();
-  },
-
-  cancelMemberEdit() {
-    editMemberId = null;
-    ['m_name', 'm_fullname', 'm_email', 'm_unit', 'm_phone'].forEach(id => document.getElementById(id).value = '');
-    document.getElementById('btnSaveMember').textContent = '+ Thêm';
-    document.getElementById('btnCancelMember').style.display = 'none';
-  },
-
-  saveMember() {
-    const name = document.getElementById('m_name').value.trim();
-    const email = document.getElementById('m_email').value.trim().toLowerCase();
-
-    if (!name || !email) {
-      alert('Vui lòng nhập Tên ngắn và Email.');
-      return;
-    }
-
-    const dup = state.data.members.find(m => String(m.email).toLowerCase() === email && m.id !== editMemberId);
-    if (dup) {
-      alert(`Email này đã được dùng bởi thành viên "${dup.name}".`);
-      return;
-    }
-
-    const old = editMemberId ? state.data.members.find(x => x.id === editMemberId) : null;
-    const record = Object.assign({ id: state.uid(), createdAt: Date.now(), deleted: false }, old || {}, {
-      name,
-      fullName: document.getElementById('m_fullname').value.trim(),
-      email,
-      unit: document.getElementById('m_unit').value.trim(),
-      phone: document.getElementById('m_phone').value.trim()
-    });
-
-    state.commit('member', record);
-    this.cancelMemberEdit();
-    this.renderMembersTab();
-  },
-
-  deleteMember(id) {
-    const m = state.data.members.find(x => x.id === id);
-    if (!m) return;
-    if (!confirm(`Xoá thành viên "${m.name}"?`)) return;
-
-    state.commit('member', { ...m, deleted: true });
-    this.renderMembersTab();
+    else if (tab === 'fields') this.renderFieldsTab();
   },
 
   renderFieldsTab() {
@@ -742,7 +650,7 @@ export const modals = {
 
   logout() {
     api.logout();
-    state.data = { projects: [], tasks: [], members: [], fields: [] };
+    state.data = { projects: [], tasks: [], users: [], fields: [] };
     state.notify();
     this.openLogin();
   },
@@ -843,6 +751,7 @@ export const modals = {
     try {
       const [users, roles] = await Promise.all([api.getUsers(), api.getRoles()]);
       cachedRoles = roles || [];
+      state.data.users = users || [];
 
       // Fill roles select in user creation form
       const roleSel = document.getElementById('u_role');
@@ -858,6 +767,8 @@ export const modals = {
                 <th>Username</th>
                 <th>Họ tên</th>
                 <th>Email</th>
+                <th>Đơn vị / Chức vụ</th>
+                <th>SĐT</th>
                 <th>Vai trò</th>
                 <th>Trạng thái</th>
                 <th></th>
@@ -869,6 +780,8 @@ export const modals = {
                   <td><b>${state.esc(u.username)}</b></td>
                   <td>${state.esc(u.fullName || '')}</td>
                   <td>${state.esc(u.email)}</td>
+                  <td>${state.esc(u.unit || '–')}</td>
+                  <td>${state.esc(u.phone || '–')}</td>
                   <td><span class="badge ${u.role?.name === 'admin' ? 'b-blue' : 'b-gray'}">${state.esc(u.role?.displayName || u.role?.name || '–')}</span></td>
                   <td><span class="badge ${u.isActive ? 'b-green' : 'b-red'}">${u.isActive ? 'Hoạt động' : 'Đã khóa'}</span></td>
                   <td style="white-space:nowrap;text-align:right">
@@ -894,6 +807,8 @@ export const modals = {
       document.getElementById('u_username').disabled = true;
       document.getElementById('u_fullname').value = user.fullName || '';
       document.getElementById('u_email').value = user.email;
+      if (document.getElementById('u_unit')) document.getElementById('u_unit').value = user.unit || '';
+      if (document.getElementById('u_phone')) document.getElementById('u_phone').value = user.phone || '';
       document.getElementById('u_password').value = '';
       document.getElementById('u_password').placeholder = 'Bỏ trống nếu giữ nguyên mật khẩu';
       document.getElementById('u_role').value = user.roleId;
@@ -913,6 +828,8 @@ export const modals = {
     document.getElementById('u_username').disabled = false;
     document.getElementById('u_fullname').value = '';
     document.getElementById('u_email').value = '';
+    if (document.getElementById('u_unit')) document.getElementById('u_unit').value = '';
+    if (document.getElementById('u_phone')) document.getElementById('u_phone').value = '';
     document.getElementById('u_password').value = '';
     document.getElementById('u_password').placeholder = 'Mật khẩu *';
     document.getElementById('u_isactive').checked = true;
@@ -925,6 +842,8 @@ export const modals = {
     const username = document.getElementById('u_username').value.trim();
     const email = document.getElementById('u_email').value.trim();
     const fullName = document.getElementById('u_fullname').value.trim();
+    const unit = document.getElementById('u_unit')?.value.trim() || '';
+    const phone = document.getElementById('u_phone')?.value.trim() || '';
     const password = document.getElementById('u_password').value.trim();
     const roleId = document.getElementById('u_role').value;
     const isActive = document.getElementById('u_isactive').checked;
@@ -936,9 +855,9 @@ export const modals = {
 
     try {
       if (editUserId) {
-        await api.updateUser(editUserId, { email, fullName, roleId, isActive, password: password || undefined });
+        await api.updateUser(editUserId, { email, fullName, unit, phone, roleId, isActive, password: password || undefined });
       } else {
-        await api.createUser({ username, email, fullName, password, roleId, isActive });
+        await api.createUser({ username, email, fullName, unit, phone, password, roleId, isActive });
       }
       this.cancelUserEdit();
       await this.renderUsersTab();

@@ -689,10 +689,6 @@ main {
     gap: 0 !important;
   }
 
-  .form-grid-members {
-    grid-template-columns: 1fr !important;
-    gap: 8px !important;
-  }
 
   .form-grid-users {
     grid-template-columns: 1fr !important;

@@ -232,20 +232,6 @@ function getInitialFallbackData() {
         updatedAt: new Date().toISOString()
       }
     ],
-    members: [
-      {
-        id: 'mem_admin',
-        name: 'Admin',
-        fullName: 'Quản trị viên',
-        email: 'admin@workmanager.local',
-        unit: 'Ban Giám đốc',
-        phone: '0900000000',
-        deleted: false,
-        updatedBy: 'system',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      }
-    ],
     fields: DEFAULT_FIELDS.map(f => ({
       ...f,
       deleted: false,
@@ -265,6 +251,8 @@ function getInitialFallbackData() {
         email: 'admin@workmanager.local',
         password: bcrypt.hashSync('admin123', 10),
         fullName: 'Quản trị viên Hệ thống',
+        unit: 'Ban Giám đốc',
+        phone: '0900000000',
         roleId: 'role_admin',
         isActive: true,
         createdAt: new Date().toISOString(),
@@ -399,24 +387,7 @@ async function seedInitialDataIfEmpty(p) {
       console.log('✅ Đã nạp 10 trường thông tin mẫu vào MySQL!');
     }
 
-    // 4. Member
-    const memberCount = await p.member.count();
-    if (memberCount === 0) {
-      await p.member.create({
-        data: {
-          id: 'mem_admin',
-          name: 'Admin',
-          fullName: 'Quản trị viên',
-          email: 'admin@workmanager.local',
-          unit: 'Ban Giám đốc',
-          phone: '0900000000',
-          deleted: false,
-          updatedBy: 'system'
-        }
-      });
-    }
-
-    // 5. Sample Project
+    // 4. Sample Project
     const projectCount = await p.project.count();
     if (projectCount === 0) {
       console.log('🌱 Đang tạo dự án mẫu đầu tiên vào MySQL...');

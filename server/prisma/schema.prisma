@@ -13,6 +13,8 @@ model User {
   email              String              @unique @db.VarChar(191)
   password           String              @db.VarChar(255)
   fullName           String?             @db.VarChar(255)
+  unit               String?             @db.VarChar(255)
+  phone              String?             @db.VarChar(100)
   roleId             String              @db.VarChar(191)
   role               Role                @relation(fields: [roleId], references: [id])
   isActive           Boolean             @default(true)

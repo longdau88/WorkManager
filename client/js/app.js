@@ -232,10 +232,6 @@ class App {
   openSettingsModal(tab) { modals.openSettings(tab); }
   closeSettingsModal() { closeModalEl('modalSettings'); }
   switchSettingsTab(tab) { modals.switchSettingsTab(tab); }
-  editMember(id) { modals.editMember(id); }
-  cancelMemberEdit() { modals.cancelMemberEdit(); }
-  saveMember() { modals.saveMember(); }
-  deleteMember(id) { modals.deleteMember(id); }
   updateField(id, k, v) { modals.updateField(id, k, v); }
   moveField(i, d) { modals.moveField(i, d); }
   addField() { modals.addField(); }

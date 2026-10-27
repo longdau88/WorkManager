@@ -72,6 +72,8 @@ export const userRepository = {
       email: data.email.toLowerCase(),
       password: data.password,
       fullName: data.fullName || '',
+      unit: data.unit || '',
+      phone: data.phone || '',
       roleId: data.roleId,
       isActive: data.isActive !== undefined ? Boolean(data.isActive) : true
     };

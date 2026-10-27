@@ -181,12 +181,6 @@ input[type=range] {
   gap: 0 12px;
 }
 
-.form-grid-members {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)) auto;
-  gap: 8px;
-  margin-bottom: 14px;
-}
 
 .form-grid-users {
   display: grid;

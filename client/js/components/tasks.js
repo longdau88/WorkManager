@@ -197,7 +197,7 @@ function renderAssigneeFilter(scope) {
   if (!sel) return;
   const currentVal = sel.value;
   const emails = new Set(scope.map(t => String(t.assignee || '').toLowerCase()).filter(Boolean));
-  state.data.members.forEach(m => m.email && emails.add(String(m.email).toLowerCase()));
+  (state.data.users || []).forEach(u => u.email && emails.add(String(u.email).toLowerCase()));
 
   const options = [
     '<option value="">👤 Mọi người nhận</option>',

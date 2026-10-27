@@ -10,6 +10,8 @@ export const userService = {
       username: u.username,
       email: u.email,
       fullName: u.fullName,
+      unit: u.unit || '',
+      phone: u.phone || '',
       roleId: u.roleId,
       role: u.role ? { id: u.role.id, name: u.role.name, displayName: u.role.displayName } : null,
       isActive: u.isActive,
@@ -29,6 +31,8 @@ export const userService = {
       username: user.username,
       email: user.email,
       fullName: user.fullName,
+      unit: user.unit || '',
+      phone: user.phone || '',
       roleId: user.roleId,
       role: user.role,
       isActive: user.isActive,
@@ -70,6 +74,8 @@ export const userService = {
       username: created.username,
       email: created.email,
       fullName: created.fullName,
+      unit: created.unit || '',
+      phone: created.phone || '',
       roleId: created.roleId,
       role: created.role,
       isActive: created.isActive
@@ -94,6 +100,8 @@ export const userService = {
     const updatePayload = {};
     if (data.fullName !== undefined) updatePayload.fullName = data.fullName;
     if (data.email !== undefined) updatePayload.email = data.email.toLowerCase();
+    if (data.unit !== undefined) updatePayload.unit = data.unit;
+    if (data.phone !== undefined) updatePayload.phone = data.phone;
     if (data.roleId !== undefined) {
       // Do not allow changing role of default admin
       if (user.username === 'admin') {
