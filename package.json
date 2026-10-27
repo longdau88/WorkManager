@@ -1,0 +1,35 @@
+{
+  "name": "workmanager",
+  "version": "1.0.0",
+  "description": "WorkManager - Hệ thống quản lý công việc và dự án chuyên nghiệp",
+  "type": "module",
+  "scripts": {
+    "build": "prisma generate --schema=server/prisma/schema.prisma",
+    "dev": "node --watch server/src/server.js",
+    "start": "node server/src/server.js",
+    "server": "npm --prefix server start",
+    "server:dev": "npm --prefix server run dev",
+    "db:docker": "docker compose up -d",
+    "db:push": "npm --prefix server run db:push",
+    "db:seed": "npm --prefix server run db:seed"
+  },
+  "dependencies": {
+    "@prisma/client": "^5.22.0",
+    "bcryptjs": "^3.0.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "jsonwebtoken": "^9.0.3",
+    "morgan": "^1.10.0",
+    "multer": "^1.4.5-lts.1",
+    "mysql2": "^3.24.6",
+    "pg": "^8.13.1",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "prisma": "^5.22.0"
+  },
+  "keywords": ["work-management", "task-manager", "express", "mysql", "rbac"],
+  "author": "",
+  "license": "ISC"
+}

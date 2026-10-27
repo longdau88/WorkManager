@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="vi" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <title>WorkManager - Hệ thống Quản lý Công việc & Dự án Chuyên nghiệp</title>
+  <meta name="description" content="Nền tảng quản lý công việc và tiến độ dự án hiện đại, hỗ trợ phân loại hạng mục, tiến độ, hạn chót, tệp đính kèm và báo cáo thống kê chuyên sâu.">
+
+  <!-- Google Fonts: Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- SortableJS for Drag-and-Drop -->
+  <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
+
+  <!-- Modular CSS Design System -->
+  <link rel="stylesheet" href="css/variables.css">
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/layout.css">
+  <link rel="stylesheet" href="css/animations.css">
+</head>
+<body>
+
+  <!-- Top Sticky Header -->
+  <header>
+    <div class="brand">
+      <span class="brand-icon">📋</span>
+      <h1 class="brand-title">WorkManager</h1>
+    </div>
+
+    <nav class="header-nav">
+      <button class="btn active" id="navTasks" onclick="window.app.setView('tasks')">
+        📋 <span>Công việc</span>
+      </button>
+      <button class="btn" id="navStats" onclick="window.app.setView('stats')">
+        📊 <span>Thống kê</span>
+      </button>
+      <button class="btn" id="navSettings" onclick="window.app.openSettingsModal()" title="Cài đặt Thành viên & Trường thông tin">
+        ⚙ <span>Cài đặt</span>
+      </button>
+    </nav>
+
+    <div class="header-right">
+      <span id="currentUserBadge" class="user-badge" title="Tài khoản">admin</span>
+      <button class="btn ghost" id="btnLogout" onclick="window.app.logout()" title="Đăng xuất" style="display:none">Đăng xuất</button>
+      <span id="syncStatus" class="sync-indicator ok" title="Đã đồng bộ">● Đã đồng bộ</span>
+      <button class="btn ghost" id="btnSyncNow" onclick="window.app.flushSync()" title="Đồng bộ ngay">⟳</button>
+      <button class="btn ghost" id="btnThemeToggle" onclick="window.app.toggleTheme()" title="Đổi giao diện Sáng / Tối">🌙</button>
+    </div>
+  </header>
+
+  <!-- Main Body Layout -->
+  <div class="layout">
+    <!-- Sidebar: Projects Navigation -->
+    <aside id="sidebarProjects">
+      <div class="aside-title">Dự án</div>
+      <div id="projectsList"></div>
+    </aside>
+
+    <!-- Main Workspace -->
+    <main>
+      <!-- Page 1: Tasks Management -->
+      <section id="pageTasks">
+        <div id="tasksAlert"></div>
+        <div id="projectHeader"></div>
+
+        <div class="toolbar">
+          <div class="tabs" id="filterTabs"></div>
+          <input id="searchTasks" class="search-input" placeholder="🔍 Tìm công việc, ghi chú, người nhận…" aria-label="Tìm kiếm">
+          <select id="assigneeFilter" class="select-filter select-assignee" aria-label="Lọc theo người nhận"></select>
+          <select id="sortTasks" class="select-filter select-sort" aria-label="Sắp xếp">
+            <option value="manual">Thứ tự thực hiện</option>
+            <option value="due">Hạn chót</option>
+            <option value="priority">Ưu tiên cao</option>
+            <option value="updated">Mới cập nhật</option>
+          </select>
+        </div>
+
+        <div class="small" id="dragHint" style="color:var(--text-muted);margin:-4px 0 10px 4px"></div>
+        <div id="tasksContainer"></div>
+      </section>
+
+      <!-- Page 2: Statistics & Reports -->
+      <section id="pageStats" style="display:none">
+        <div id="statsContainer"></div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Floating Add Task Button -->
+  <button class="fab" id="fabAddTask" onclick="window.app.openTaskModal()" title="Thêm công việc mới">+</button>
+
+  <!-- ================= MODAL: TASK (CÔNG VIỆC) ================= -->
+  <div class="modal-bg" id="modalTask" onclick="if(event.target===this)window.app.closeTaskModal()">
+    <div class="modal" role="dialog" aria-labelledby="taskModalTitle">
+      <h2 id="taskModalTitle">Công việc</h2>
+
+      <div class="field">
+        <label for="t_title">Tên công việc *</label>
+        <input id="t_title" placeholder="Nhập tiêu đề công việc…">
+      </div>
+
+      <div class="form-grid-2col">
+        <div class="field">
+          <label for="t_project">Dự án</label>
+          <select id="t_project" onchange="window.app.fillFolders('')"></select>
+        </div>
+        <div class="field">
+          <label for="t_folder">Hạng mục</label>
+          <select id="t_folder"></select>
+        </div>
+        <div class="field">
+          <label for="t_assigner">Người giao</label>
+          <select id="t_assigner"></select>
+        </div>
+        <div class="field">
+          <label for="t_assignee">Người nhận</label>
+          <select id="t_assignee"></select>
+        </div>
+        <div class="field">
+          <label for="t_status">Trạng thái</label>
+          <select id="t_status" onchange="window.app.onTaskStatusChange()">
+            <option value="todo">Chưa làm</option>
+            <option value="doing">Đang làm</option>
+            <option value="done">Hoàn thành</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="t_priority">Mức ưu tiên</label>
+          <select id="t_priority">
+            <option value="low">Thấp</option>
+            <option value="med">Trung bình</option>
+            <option value="high">Cao</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="t_start">Ngày bắt đầu</label>
+          <input type="date" id="t_start">
+        </div>
+        <div class="field">
+          <label for="t_due">Hạn chót</label>
+          <input type="date" id="t_due">
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="t_progress">Tiến độ: <b id="t_progress_val">0</b>%</label>
+        <input type="range" id="t_progress" min="0" max="100" step="5" oninput="window.app.onTaskProgressInput()">
+      </div>
+
+      <div class="field">
+        <label for="t_note">Ghi chú & Chi tiết</label>
+        <textarea id="t_note" rows="3" placeholder="Chi tiết yêu cầu, liên hệ, kết quả bàn giao…"></textarea>
+      </div>
+
+      <div class="field">
+        <label>Tệp đính kèm & Hình ảnh</label>
+        <div class="files" id="t_files_list"></div>
+        <label class="btn" style="display:inline-flex;margin-top:4px">
+          📎 Thêm tệp / ảnh
+          <input type="file" multiple hidden onchange="window.app.handleTaskFileUpload(this)">
+        </label>
+        <span class="small" id="t_upload_status" style="margin-left:8px;color:var(--pri-500)"></span>
+      </div>
+
+      <div class="modal-actions">
+        <button class="btn danger" id="btnDeleteTask" onclick="window.app.deleteTaskModal()">Xoá</button>
+        <span style="flex:1"></span>
+        <button class="btn" onclick="window.app.closeTaskModal()">Đóng</button>
+        <button class="btn primary" onclick="window.app.saveTaskModal()">Lưu công việc</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= MODAL: PROJECT (DỰ ÁN) ================= -->
+  <div class="modal-bg" id="modalProject" onclick="if(event.target===this)window.app.closeProjectModal()">
+    <div class="modal" role="dialog" aria-labelledby="projectModalTitle">
+      <h2 id="projectModalTitle">Dự án</h2>
+
+      <div class="field">
+        <label for="p_name">Tên dự án *</label>
+        <input id="p_name" placeholder="Ví dụ: Thi công hệ thống camera giám sát…">
+      </div>
+
+      <div class="form-grid-2col">
+        <div class="field">
+          <label for="p_due">Hạn hoàn thành</label>
+          <input type="date" id="p_due">
+        </div>
+        <div class="field">
+          <label>Màu đại diện</label>
+          <div class="swatches" id="colorSwatches"></div>
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="p_note">Ghi chú dự án</label>
+        <textarea id="p_note" rows="2" placeholder="Ghi chú tổng quan về dự án…"></textarea>
+      </div>
+
+      <h3>Thông tin khai báo <button class="btn ghost" style="float:right;padding:0;font-size:var(--font-xs);color:var(--pri-500)" onclick="window.app.openSettingsModal('fields')">⚙ Cấu hình trường</button></h3>
+      <div id="p_custom_fields"></div>
+
+      <h3>Hạng mục (thư mục con)</h3>
+      <div style="display:flex;gap:8px;margin-bottom:8px">
+        <select id="p_template" onchange="window.app.applyProjectTemplate()" style="flex:1"></select>
+      </div>
+      <label class="small" id="p_tasks_toggle_wrap" style="display:none;margin-bottom:8px">
+        <input type="checkbox" id="p_include_tasks" style="width:auto;vertical-align:middle"> Tự động tạo các đầu việc mẫu theo từng hạng mục
+      </label>
+      <div id="p_folders_list"></div>
+      <button class="btn" onclick="window.app.addFolder()" style="margin-top:6px">+ Thêm hạng mục</button>
+
+      <h3>Tệp đính kèm dự án</h3>
+      <div class="files" id="p_files_list"></div>
+      <label class="btn" style="display:inline-flex;margin-top:4px">
+        📎 Thêm tệp / tài liệu
+        <input type="file" multiple hidden onchange="window.app.handleProjFileUpload(this)">
+      </label>
+      <span class="small" id="p_upload_status" style="margin-left:8px;color:var(--pri-500)"></span>
+
+      <div class="modal-actions">
+        <button class="btn danger" id="btnDeleteProject" onclick="window.app.deleteProjectModal()">Xoá dự án</button>
+        <span style="flex:1"></span>
+        <button class="btn" onclick="window.app.closeProjectModal()">Đóng</button>
+        <button class="btn primary" onclick="window.app.saveProjectModal()">Lưu dự án</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= MODAL: SETTINGS (CÀI ĐẶT) ================= -->
+  <div class="modal-bg" id="modalSettings" onclick="if(event.target===this)window.app.closeSettingsModal()">
+    <div class="modal wide" role="dialog" aria-labelledby="settingsModalTitle">
+      <h2 id="settingsModalTitle">⚙ Cài đặt hệ thống</h2>
+
+      <div class="tabs" style="margin-bottom:14px">
+        <span class="tab active" id="tabSetMembers" onclick="window.app.switchSettingsTab('members')">👥 Thành viên</span>
+        <span class="tab" id="tabSetFields" onclick="window.app.switchSettingsTab('fields')">🧾 Trường thông tin dự án</span>
+        <span class="tab" id="tabSetUsers" style="display:none" onclick="window.app.switchSettingsTab('users')">👤 Tài khoản</span>
+        <span class="tab" id="tabSetRoles" style="display:none" onclick="window.app.switchSettingsTab('roles')">🛡️ Vai trò & Phân quyền</span>
+      </div>
+
+      <!-- Tab 1: Thành viên -->
+      <div id="paneSetMembers">
+        <div class="small" style="color:var(--text-muted);margin-bottom:10px">Khai báo danh sách người giao và người nhận việc. Tên ngắn hiển thị trên danh sách, email dùng để xác định danh tính.</div>
+        <div class="form-grid-members">
+          <input id="m_name" placeholder="Tên ngắn * (VD: Nam)">
+          <input id="m_fullname" placeholder="Họ tên đầy đủ">
+          <input id="m_email" placeholder="Email *" type="email">
+          <input id="m_unit" placeholder="Đơn vị / Chức vụ">
+          <input id="m_phone" placeholder="Số điện thoại">
+          <div style="display:flex;gap:6px">
+            <button class="btn primary" id="btnSaveMember" onclick="window.app.saveMember()">+ Thêm</button>
+            <button class="btn" id="btnCancelMember" style="display:none" onclick="window.app.cancelMemberEdit()">Huỷ</button>
+          </div>
+        </div>
+        <div id="membersTableWrap"></div>
+      </div>
+
+      <!-- Tab 2: Trường thông tin -->
+      <div id="paneSetFields" style="display:none">
+        <div class="small" style="color:var(--text-muted);margin-bottom:10px">Các trường này tự động xuất hiện trong phần Thông tin khai báo của mọi dự án. Trường kiểu Số được cộng tổng trong Thống kê; kiểu Lựa chọn được đếm số lượng.</div>
+        <div id="fieldsTableWrap"></div>
+      </div>
+
+      <!-- Tab 3: Quản lý Tài khoản (Users) -->
+      <div id="paneSetUsers" style="display:none">
+        <div class="small" style="color:var(--text-muted);margin-bottom:10px">Quản lý danh sách tài khoản đăng nhập vào hệ thống, gán vai trò quyền hạn và kích hoạt/khóa tài khoản.</div>
+        <div style="background:var(--bg-card);border:1px solid var(--border-light);border-radius:var(--radius-lg);padding:14px;margin-bottom:14px">
+          <div class="form-grid-users">
+            <div class="field" style="margin-bottom:0">
+              <label for="u_username" style="font-size:11px">Tên đăng nhập *</label>
+              <input id="u_username" placeholder="Username (viết liền)">
+            </div>
+            <div class="field" style="margin-bottom:0">
+              <label for="u_fullname" style="font-size:11px">Họ và tên</label>
+              <input id="u_fullname" placeholder="Họ tên đầy đủ">
+            </div>
+            <div class="field" style="margin-bottom:0">
+              <label for="u_email" style="font-size:11px">Email *</label>
+              <input id="u_email" placeholder="Email liên hệ" type="email">
+            </div>
+            <div class="field" style="margin-bottom:0">
+              <label for="u_password" style="font-size:11px">Mật khẩu *</label>
+              <input id="u_password" placeholder="Mật khẩu" type="password">
+            </div>
+            <div class="field" style="margin-bottom:0">
+              <label for="u_role" style="font-size:11px">Vai trò</label>
+              <select id="u_role"></select>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-top:6px">
+            <label style="display:inline-flex;align-items:center;gap:6px;font-size:var(--font-sm);cursor:pointer">
+              <input type="checkbox" id="u_isactive" checked style="width:auto;margin:0"> Kích hoạt tài khoản
+            </label>
+            <div style="display:flex;gap:6px">
+              <button class="btn primary" id="btnSaveUser" onclick="window.app.saveUser()">+ Thêm tài khoản</button>
+              <button class="btn" id="btnCancelUser" style="display:none" onclick="window.app.cancelUserEdit()">Huỷ</button>
+            </div>
+          </div>
+        </div>
+        <div id="usersTableWrap"></div>
+      </div>
+
+      <!-- Tab 4: Vai trò & Phân quyền (Roles) -->
+      <div id="paneSetRoles" style="display:none">
+        <div class="small" style="color:var(--text-muted);margin-bottom:10px">Tùy biến các vai trò (roles) trong hệ thống và phân quyền chi tiết cho từng vai trò.</div>
+        <div style="background:var(--bg-card);border:1px solid var(--border-light);border-radius:var(--radius-lg);padding:14px;margin-bottom:14px">
+          <div class="form-grid-2col">
+            <div class="field" style="margin-bottom:0">
+              <label for="r_name" style="font-size:11px">Mã vai trò (Key) *</label>
+              <input id="r_name" placeholder="Ví dụ: manager, lead, reviewer…">
+            </div>
+            <div class="field" style="margin-bottom:0">
+              <label for="r_display" style="font-size:11px">Tên hiển thị *</label>
+              <input id="r_display" placeholder="Ví dụ: Quản lý dự án">
+            </div>
+          </div>
+          <div class="field" style="margin-bottom:10px">
+            <label for="r_desc" style="font-size:11px">Mô tả vai trò</label>
+            <input id="r_desc" placeholder="Mô tả chức năng hoặc phạm vi công việc…">
+          </div>
+          <div class="field" style="margin-bottom:10px">
+            <label style="font-size:12px;font-weight:600;margin-bottom:6px;display:block">Danh sách quyền hệ thống cấp cho vai trò:</label>
+            <div id="rolePermCheckboxes" style="display:grid;grid-template-columns:repeat(auto-fit, minmax(240px, 1fr));gap:6px;max-height:160px;overflow-y:auto;padding:8px;background:var(--bg-surface);border:1px solid var(--border-light);border-radius:var(--radius-md)"></div>
+          </div>
+          <div style="display:flex;gap:6px">
+            <button class="btn primary" id="btnSaveRole" onclick="window.app.saveRole()">+ Thêm vai trò</button>
+            <button class="btn" id="btnCancelRole" style="display:none" onclick="window.app.cancelRoleEdit()">Huỷ</button>
+          </div>
+        </div>
+        <div id="rolesTableWrap"></div>
+      </div>
+
+      <div class="modal-actions">
+        <span style="flex:1"></span>
+        <button class="btn" onclick="window.app.closeSettingsModal()">Đóng</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= MODAL: LOGIN (ĐĂNG NHẬP) ================= -->
+  <div class="modal-bg" id="modalLogin" style="z-index:100">
+    <div class="modal" role="dialog" aria-labelledby="loginModalTitle" style="max-width:400px;text-align:left">
+      <div style="text-align:center;margin-bottom:16px">
+        <div style="font-size:36px;line-height:1;margin-bottom:8px">🔐</div>
+        <h2 id="loginModalTitle" style="margin:0 0 6px 0;font-size:var(--font-xl)">Đăng nhập WorkManager</h2>
+        <div class="small" style="color:var(--text-muted)">Hệ thống quản lý công việc và phân quyền dự án</div>
+      </div>
+
+      <div id="loginError" class="login-error-box" style="color:var(--danger-text);background:var(--danger-bg);border:1px solid var(--danger-border);border-radius:var(--radius-md);padding:8px 12px;margin-bottom:12px;font-size:var(--font-sm)"></div>
+
+      <div class="field">
+        <label for="loginUsername">Tên đăng nhập *</label>
+        <input id="loginUsername" placeholder="Nhập username (VD: admin)" autocomplete="username" onkeydown="if(event.key==='Enter')window.app.submitLogin()">
+      </div>
+
+      <div class="field">
+        <label for="loginPassword">Mật khẩu *</label>
+        <input id="loginPassword" type="password" placeholder="Nhập mật khẩu" autocomplete="current-password" onkeydown="if(event.key==='Enter')window.app.submitLogin()">
+      </div>
+
+      <div style="margin-top:16px">
+        <button class="btn primary" style="width:100%;padding:10px;font-weight:600" onclick="window.app.submitLogin()">Đăng nhập</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= MODAL: PROJECT PERMISSIONS (PHÂN QUYỀN DỰ ÁN) ================= -->
+  <div class="modal-bg" id="modalProjectPermissions" onclick="if(event.target===this)window.app.closeProjectPermissionsModal()">
+    <div class="modal wide" role="dialog" aria-labelledby="projPermTitle" style="max-width:840px">
+      <h2 id="projPermTitle">🔒 Phân quyền dự án</h2>
+
+      <div id="projPermTableWrap"></div>
+
+      <div class="modal-actions" style="margin-top:16px">
+        <span style="flex:1"></span>
+        <button class="btn" onclick="window.app.closeProjectPermissionsModal()">Đóng</button>
+        <button class="btn primary" id="btnSaveProjectPerm" onclick="window.app.saveProjectPermissions()">Lưu phân quyền</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main ES Module Entry Point -->
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>

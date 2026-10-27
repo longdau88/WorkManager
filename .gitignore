@@ -1,0 +1,39 @@
+# Dependencies
+node_modules/
+server/node_modules/
+package-lock.json
+
+# Environment Variables & Secrets (IMPORTANT - Ignore all .env and .env.example files)
+.env*
+*.env*
+**/.env*
+**/.*env*
+
+# Prisma Generated engines & local sqlite/db cache
+server/prisma/*.db
+server/prisma/*.sqlite
+server/prisma/*.sqlite-journal
+
+# Uploaded user files (keep .gitkeep)
+server/uploads/*
+!server/uploads/.gitkeep
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+
+# Runtime data
+server/data/fallback_db.json
+
+# OS & IDE
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Vercel output
+.vercel/

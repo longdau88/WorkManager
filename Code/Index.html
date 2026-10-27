@@ -1,0 +1,1186 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<base target="_top">
+<meta charset="utf-8">
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
+<style>
+:root{--bg:#f4f6fa;--card:#fff;--text:#1f2937;--muted:#6b7280;--line:#e5e7eb;--hover:#f8fafc;--pri:#2563eb;--red:#dc2626;--orange:#ea580c;--green:#16a34a}
+@media (prefers-color-scheme:dark){:root{--bg:#0f172a;--card:#1e293b;--text:#e5e7eb;--muted:#94a3b8;--line:#334155;--hover:#243247;--pri:#3b82f6}}
+*{box-sizing:border-box}
+body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;background:var(--bg);color:var(--text);font-size:14px}
+header{position:sticky;top:0;z-index:10;display:flex;align-items:center;gap:8px;padding:8px 14px;background:var(--card);border-bottom:1px solid var(--line)}
+header h1{font-size:16px;margin:0;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sync{font-size:12px;padding:4px 10px;border-radius:999px;background:var(--bg);color:var(--muted);white-space:nowrap}
+.sync.ok{color:var(--green)}.sync.off{color:var(--orange)}.sync.err{color:var(--red)}
+.me{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px}
+.btn{border:1px solid var(--line);background:var(--card);color:var(--text);padding:6px 11px;border-radius:8px;cursor:pointer;font-size:13px;white-space:nowrap}
+.btn.primary{background:var(--pri);border-color:var(--pri);color:#fff}
+.btn.danger{color:var(--red);border-color:var(--red)}
+.btn.on{background:var(--pri);border-color:var(--pri);color:#fff}
+.ibtn{border:1px solid var(--line);background:var(--card);color:var(--text);width:26px;height:26px;border-radius:6px;cursor:pointer;font-size:13px;padding:0;flex-shrink:0}
+.layout{display:flex;max-width:1400px;margin:0 auto}
+aside{width:250px;padding:12px;flex-shrink:0}
+main{flex:1;padding:12px 14px;min-width:0;padding-bottom:100px}
+.proj{padding:8px 10px;border-radius:9px;cursor:pointer;margin-bottom:5px;background:var(--card);border:1px solid var(--line)}
+.proj.active{border-color:var(--pri);box-shadow:0 0 0 1px var(--pri)}
+.row{display:flex;align-items:center;gap:8px}
+.dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.proj .name{flex:1;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bar{height:6px;background:var(--line);border-radius:3px;overflow:hidden;margin-top:5px}
+.bar>i{display:block;height:100%;background:var(--pri);transition:width .3s}
+.bar.mini{width:44px;height:5px;margin:0;display:inline-block;vertical-align:middle;flex-shrink:0}
+.small{font-size:12px;color:var(--muted)}
+.badge{font-size:11px;padding:1px 7px;border-radius:999px;font-weight:600;white-space:nowrap}
+.b-red{background:#fee2e2;color:#b91c1c}.b-orange{background:#ffedd5;color:#c2410c}.b-green{background:#dcfce7;color:#15803d}
+.b-gray{background:var(--line);color:var(--muted)}.b-blue{background:#dbeafe;color:#1d4ed8}
+.toolbar{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;align-items:center}
+.tabs{display:flex;gap:4px;overflow-x:auto;max-width:100%}
+.tab{padding:5px 11px;border-radius:999px;border:1px solid var(--line);background:var(--card);cursor:pointer;white-space:nowrap;font-size:13px}
+.tab b{font-weight:600;color:var(--muted);margin-left:3px}
+.tab.active{background:var(--pri);color:#fff;border-color:var(--pri)}.tab.active b{color:#dbeafe}
+input,select,textarea{font:inherit;color:var(--text);background:var(--card);border:1px solid var(--line);border-radius:7px;padding:7px 9px;width:100%}
+input[type=range]{padding:0;accent-color:var(--pri)}
+input:disabled,select:disabled,textarea:disabled{opacity:.75}
+textarea{resize:vertical}
+/* ---- Nhóm hạng mục & dòng công việc gọn ---- */
+.group{margin-bottom:10px}
+.ghead{display:flex;align-items:center;gap:7px;padding:6px 4px}
+.ghead .gname{cursor:pointer;font-size:14px}
+.gtog{cursor:pointer;color:var(--muted);width:14px;text-align:center}
+.ghead .ibtn{margin-left:auto}
+.ghandle,.handle{cursor:grab;color:var(--muted);user-select:none;touch-action:none;padding:0 2px;font-size:15px;letter-spacing:-2px}
+.tlist{background:var(--card);border:1px solid var(--line);border-radius:9px;overflow:hidden;min-height:10px}
+.tlist:empty::after{content:"Chưa có đầu việc";display:block;padding:9px 12px;color:var(--muted);font-size:12px}
+.task{display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--line);border-left:3px solid transparent;padding:4px 10px;min-height:38px;cursor:pointer;background:var(--card)}
+.task:last-child{border-bottom:none}
+.task:hover{background:var(--hover)}
+.task.overdue{border-left-color:var(--red)}.task.soon{border-left-color:var(--orange)}
+.task.done .title{text-decoration:line-through;color:var(--muted)}
+.task.sortable-ghost{opacity:.4;background:#dbeafe}
+.code{font-size:12px;color:var(--muted);min-width:28px;font-variant-numeric:tabular-nums}
+.check{width:18px;height:18px;padding:0;flex-shrink:0;accent-color:var(--green);cursor:pointer;margin:0}
+.title{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hi{color:var(--red);font-weight:800;margin-right:4px}
+.tmeta{display:flex;align-items:center;gap:6px;flex-shrink:0}
+.who{font-size:12px;color:var(--muted);white-space:nowrap}.who b{color:var(--text);font-weight:600}
+.pg{display:inline-flex;align-items:center;gap:4px;font-size:12px;color:var(--muted);min-width:78px;justify-content:flex-end}
+.done-badge{font-size:11px;font-weight:700;color:#15803d;background:#dcfce7;border-radius:999px;padding:1px 8px;min-width:58px;text-align:center}
+.due{min-width:86px;text-align:right}
+.pchip{font-size:11px;font-weight:600;border-radius:999px;padding:1px 7px;white-space:nowrap;max-width:140px;overflow:hidden;text-overflow:ellipsis}
+.hint{font-size:12px;color:var(--muted);margin:-4px 0 8px}
+/* ---- Khác ---- */
+.fab{position:fixed;right:20px;bottom:20px;width:54px;height:54px;border-radius:50%;border:none;background:var(--pri);color:#fff;font-size:28px;line-height:1;box-shadow:0 4px 12px rgba(0,0,0,.25);cursor:pointer;z-index:20}
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;z-index:30;padding:10px}
+.modal-bg.show{display:flex}
+.modal{background:var(--card);border-radius:14px;width:100%;max-width:560px;max-height:94vh;overflow:auto;padding:16px 18px}
+.modal.wide{max-width:900px}
+.modal h2{margin:0 0 12px;font-size:17px}
+.modal h3{font-size:13px;margin:16px 0 8px;color:var(--pri);text-transform:uppercase;letter-spacing:.3px;border-top:1px solid var(--line);padding-top:12px}
+.field{margin-bottom:9px}.field label{display:block;font-size:12px;color:var(--muted);margin-bottom:3px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:0 10px}
+.actions{display:flex;gap:8px;margin-top:14px;position:sticky;bottom:-16px;background:var(--card);padding:10px 0 4px}
+.actions .spacer{flex:1}
+.swatches{display:flex;gap:8px;flex-wrap:wrap}
+.sw{width:26px;height:26px;border-radius:50%;cursor:pointer;border:3px solid transparent}
+.sw.sel{border-color:var(--text)}
+.alert{background:#fff7ed;border:1px solid #fdba74;color:#9a3412;border-radius:9px;padding:8px 12px;margin-bottom:10px;font-size:13px;cursor:pointer}
+.phead{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 14px;margin-bottom:10px}
+.phead summary{cursor:pointer;font-size:12px;color:var(--pri);margin-top:8px}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.ichip{background:var(--bg);border-radius:7px;padding:3px 8px;font-size:12px}
+.empty{text-align:center;color:var(--muted);padding:40px 0}
+.frow{display:flex;gap:6px;align-items:center;margin-bottom:5px}
+.files{display:flex;flex-direction:column;gap:5px;margin-bottom:6px}
+.file{display:flex;align-items:center;gap:8px;background:var(--bg);border-radius:8px;padding:5px 8px}
+.file img{width:40px;height:40px;object-fit:cover;border-radius:5px;flex-shrink:0}
+.file .ficon{width:40px;height:40px;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0}
+.file a{color:var(--pri);text-decoration:none;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block}
+.file .fbody{flex:1;min-width:0}
+.upl{display:inline-block}
+.tbl-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:9px;background:var(--card);margin-bottom:16px}
+.tbl{border-collapse:collapse;width:100%;font-size:13px}
+.tbl th,.tbl td{border-bottom:1px solid var(--line);padding:6px 9px;text-align:left;white-space:nowrap}
+.tbl th{background:var(--bg);font-size:12px;color:var(--muted);font-weight:600;position:sticky;top:0}
+.tbl td.num,.tbl th.num{text-align:right;font-variant-numeric:tabular-nums}
+.tbl tfoot td{font-weight:700;background:var(--bg)}
+.tbl tr.click{cursor:pointer}.tbl tr.click:hover td{background:var(--hover)}
+.tbl input,.tbl select{padding:4px 6px;font-size:13px;min-width:80px}
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;margin-bottom:14px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+.card .v{font-size:22px;font-weight:700;font-variant-numeric:tabular-nums}
+.card .l{font-size:12px;color:var(--muted)}
+.sec{font-size:13px;font-weight:700;margin:14px 0 8px;text-transform:uppercase;letter-spacing:.3px;color:var(--muted)}
+.mform{display:grid;grid-template-columns:repeat(5,1fr) auto;gap:6px;margin:10px 0}
+body.ro .fab, body.ro .ro-hide{display:none !important}
+body.ro .check{pointer-events:none}
+.hm{}
+@media (max-width:800px){
+  .layout{flex-direction:column}
+  aside{width:auto;padding:8px 10px 0;display:flex;gap:8px;overflow-x:auto}
+  .proj{min-width:160px;margin:0}
+  main{padding:10px;padding-bottom:100px}
+  .hm,.me,header h1{display:none}
+  .due{min-width:0;text-align:left}
+  header{justify-content:flex-end}
+  #q{order:3;flex-basis:100%}
+  .task{flex-wrap:wrap;row-gap:2px;padding:6px 10px}
+  .title{white-space:normal;flex:1 1 60%}
+  .tmeta{flex-basis:100%;flex-wrap:wrap;padding-left:36px}
+  .grid2{grid-template-columns:1fr 1fr}
+  .mform{grid-template-columns:1fr 1fr}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>📋 <span class="hm">Quản lý công việc</span></h1>
+  <button class="btn" id="vb_tasks" onclick="setView('tasks')">📋<span class="hm"> Công việc</span></button>
+  <button class="btn" id="vb_stats" onclick="setView('stats')">📊<span class="hm"> Thống kê</span></button>
+  <button class="btn" onclick="openSettings()" title="Thành viên & trường thông tin">⚙</button>
+  <span id="me" class="me"></span>
+  <span id="sync" class="sync">…</span>
+  <button class="btn" onclick="flush()" title="Đồng bộ ngay">⟳</button>
+</header>
+
+<div class="layout">
+  <aside id="projects"></aside>
+  <main>
+    <div id="pgTasks">
+      <div id="alert"></div>
+      <div id="phead"></div>
+      <div class="toolbar">
+        <div class="tabs" id="tabs"></div>
+        <input id="q" placeholder="🔍 Tìm công việc, ghi chú…" style="flex:1;min-width:150px" oninput="renderMain()">
+        <select id="fa" style="width:auto;max-width:170px" onchange="renderMain()"></select>
+        <select id="sort" style="width:auto" onchange="renderMain()">
+          <option value="manual">Thứ tự thực hiện</option>
+          <option value="due">Hạn chót</option>
+          <option value="priority">Ưu tiên</option>
+          <option value="updated">Mới cập nhật</option>
+        </select>
+      </div>
+      <div class="hint" id="hint"></div>
+      <div id="list"></div>
+    </div>
+    <div id="pgStats" style="display:none"></div>
+  </main>
+</div>
+
+<button class="fab" id="fab" onclick="openTask()" title="Thêm công việc">+</button>
+
+<!-- ===== Modal công việc ===== -->
+<div class="modal-bg" id="mTask" onclick="if(event.target===this)closeTask()">
+  <div class="modal">
+    <h2 id="tTitle">Công việc</h2>
+    <div class="field"><label>Tên công việc *</label><input id="t_title"></div>
+    <div class="grid2">
+      <div class="field"><label>Dự án</label><select id="t_project" onchange="fillFolders('')"></select></div>
+      <div class="field"><label>Hạng mục</label><select id="t_folder"></select></div>
+      <div class="field"><label>Người giao</label><select id="t_assigner"></select></div>
+      <div class="field"><label>Người nhận <span class="small">(nhận email báo)</span></label><select id="t_assignee" onchange="onAssignee()"></select></div>
+      <div class="field"><label>Trạng thái</label>
+        <select id="t_status" onchange="onStatus()"><option value="todo">Chưa làm</option><option value="doing">Đang làm</option><option value="done">Hoàn thành</option></select></div>
+      <div class="field"><label>Ưu tiên</label>
+        <select id="t_priority"><option value="low">Thấp</option><option value="med">Trung bình</option><option value="high">Cao</option></select></div>
+      <div class="field"><label>Ngày bắt đầu</label><input type="date" id="t_start"></div>
+      <div class="field"><label>Hạn chót</label><input type="date" id="t_due"></div>
+    </div>
+    <div class="field"><label>Tiến độ: <b id="t_pv">0</b>%</label>
+      <input type="range" id="t_progress" min="0" max="100" step="5" oninput="onProg()"></div>
+    <div class="field"><label>Ghi chú</label><textarea id="t_note" rows="4" placeholder="Chi tiết, đầu mối liên hệ, kết quả…"></textarea></div>
+    <div class="field"><label>Hình ảnh / tệp báo cáo</label>
+      <div class="files" id="t_files"></div>
+      <label class="btn upl ro-hide">📎 Thêm ảnh / tệp<input type="file" multiple hidden onchange="uploadFiles(this,'t_files')"></label>
+      <span class="small" id="t_files_st"></span>
+    </div>
+    <div class="small" id="t_meta"></div>
+    <div class="actions">
+      <button class="btn danger ro-hide" id="t_del" onclick="delTask()">Xoá</button>
+      <span class="spacer"></span>
+      <button class="btn" onclick="closeTask()">Đóng</button>
+      <button class="btn primary ro-hide" onclick="saveTask()">Lưu</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Modal dự án ===== -->
+<div class="modal-bg" id="mProj" onclick="if(event.target===this)closeProject()">
+  <div class="modal">
+    <h2 id="pTitle">Dự án</h2>
+    <div class="field"><label>Tên dự án *</label><input id="p_name"></div>
+    <div class="grid2">
+      <div class="field"><label>Hạn hoàn thành</label><input type="date" id="p_due"></div>
+      <div class="field"><label>Màu</label><div class="swatches" id="p_colors"></div></div>
+    </div>
+    <div class="field"><label>Ghi chú dự án</label><textarea id="p_note" rows="2"></textarea></div>
+
+    <h3>Thông tin khai báo <a href="#" class="small ro-hide" style="float:right;text-transform:none" onclick="event.preventDefault();openSettings('fld')">⚙ Sửa danh sách trường</a></h3>
+    <div id="p_info"></div>
+
+    <h3>Hạng mục (thư mục con)</h3>
+    <div class="row ro-hide" style="margin-bottom:8px">
+      <select id="p_tpl" onchange="applyTpl()" style="flex:1"></select>
+    </div>
+    <label class="small ro-hide" id="p_tasks_wrap" style="display:none;margin-bottom:8px"><input type="checkbox" id="p_tasks" style="width:auto;vertical-align:middle"> Tạo kèm các đầu việc mẫu trong từng hạng mục</label>
+    <div id="p_folders"></div>
+    <button class="btn ro-hide" onclick="addFolder()" style="margin-top:4px">+ Thêm hạng mục</button>
+
+    <h3>Tệp đính kèm dự án</h3>
+    <div class="files" id="p_files"></div>
+    <label class="btn upl ro-hide">📎 Thêm ảnh / tệp<input type="file" multiple hidden onchange="uploadFiles(this,'p_files')"></label>
+    <span class="small" id="p_files_st"></span>
+
+    <div class="actions">
+      <button class="btn danger ro-hide" id="p_del" onclick="delProject()">Xoá dự án</button>
+      <span class="spacer"></span>
+      <button class="btn" onclick="closeProject()">Đóng</button>
+      <button class="btn primary ro-hide" onclick="saveProject()">Lưu</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Modal cài đặt ===== -->
+<div class="modal-bg" id="mSet" onclick="if(event.target===this)closeM('mSet')">
+  <div class="modal wide">
+    <h2>⚙ Cài đặt</h2>
+    <div class="tabs" style="margin-bottom:10px">
+      <span class="tab" id="st_mem" onclick="setTab('mem')">👥 Thành viên</span>
+      <span class="tab" id="st_fld" onclick="setTab('fld')">🧾 Trường thông tin dự án</span>
+    </div>
+    <div id="paneMem">
+      <div class="small">Khai báo người giao / nhận việc. <b>Tên ngắn</b> dùng để hiển thị gọn trong danh sách, <b>Email</b> dùng để gửi thông báo giao việc.</div>
+      <div class="mform ro-hide">
+        <input id="m_name" placeholder="Tên ngắn * (VD: A.Nam)">
+        <input id="m_full" placeholder="Họ tên đầy đủ">
+        <input id="m_email" placeholder="Email *" type="email">
+        <input id="m_unit" placeholder="Đơn vị / chức vụ">
+        <input id="m_phone" placeholder="Số điện thoại">
+        <div class="row"><button class="btn primary" id="m_save" onclick="saveMember()">+ Thêm</button><button class="btn" id="m_cancel" style="display:none" onclick="clearMemberForm()">Huỷ</button></div>
+      </div>
+      <div id="memList"></div>
+    </div>
+    <div id="paneFld" style="display:none">
+      <div class="small" style="margin-bottom:8px">Các trường này xuất hiện trong phần <b>Thông tin khai báo</b> của mọi dự án. Trường kiểu <b>Số</b> được cộng tổng trong Thống kê; kiểu <b>Lựa chọn</b> được đếm theo từng giá trị.</div>
+      <div id="fldList"></div>
+      <button class="btn ro-hide" onclick="addField()">+ Thêm trường</button>
+    </div>
+    <div class="actions"><span class="spacer"></span><button class="btn" onclick="closeM('mSet')">Đóng</button></div>
+  </div>
+</div>
+
+<script>
+/* ======================= CẤU HÌNH ======================= */
+const WARN_DAYS = 3;
+const AUTO_SYNC_MS = 60000;
+const MAX_UPLOAD = 15 * 1024 * 1024;
+const COLORS = ['#2563eb','#16a34a','#dc2626','#ea580c','#9333ea','#0891b2','#ca8a04','#db2777','#475569'];
+const PRW = {high:0, med:1, low:2};
+const FTYPES = [['text','Văn bản'],['number','Số'],['date','Ngày'],['select','Lựa chọn']];
+const FILTERS = [['all','Tất cả'],['mine','Việc của tôi'],['doing','Đang làm'],['soon','Sắp hạn'],['overdue','Quá hạn'],['done','Hoàn thành']];
+const TYPE_ARR = {project:'projects', task:'tasks', member:'members', field:'fields'};
+
+/* Mẫu hạng mục – [tên hạng mục, [đầu việc mẫu]] */
+const TEMPLATES = {
+  basic: {name: 'Cơ bản – 5 hạng mục', folders: [
+    ['Hồ sơ', []], ['Hàng hóa', []], ['Triển khai lắp đặt', []], ['Hướng dẫn bàn giao', []], ['Bảo trì', []]
+  ]},
+  integ: {name: 'Tích hợp hệ thống / camera giám sát – 10 hạng mục', folders: [
+    ['Khảo sát & thiết kế', ['Khảo sát hiện trạng, vị trí lắp đặt', 'Lập bản vẽ thiết kế, sơ đồ hệ thống', 'Lập dự toán, bảng khối lượng']],
+    ['Hồ sơ pháp lý – hợp đồng', ['Hồ sơ mời thầu / đề xuất kỹ thuật', 'Ký kết hợp đồng', 'Bảo lãnh thực hiện hợp đồng', 'Hồ sơ tạm ứng']],
+    ['Hàng hóa', ['Đặt hàng nhà cung cấp', 'Theo dõi tiến độ giao hàng', 'Thu thập CO, CQ, packing list', 'Kiểm tra nhập kho, lập danh sách serial/MAC']],
+    ['Thi công hạ tầng', ['Thi công tuyến ống, máng cáp', 'Kéo cáp quang, cáp mạng, cáp nguồn', 'Lắp tủ rack, cột, giá đỡ']],
+    ['Lắp đặt thiết bị', ['Lắp camera, đầu ghi, switch', 'Đấu nối, hàn quang, bấm đầu']],
+    ['Cấu hình & chạy thử', ['Cấu hình IP, VLAN, đầu ghi', 'Cài đặt phần mềm quản lý', 'Chạy thử, hiệu chỉnh góc quan sát']],
+    ['Nghiệm thu', ['Đo kiểm, biên bản chạy thử', 'Nghiệm thu khối lượng', 'Nghiệm thu hoàn thành, đưa vào sử dụng']],
+    ['Đào tạo & bàn giao', ['Hướng dẫn vận hành, sử dụng', 'Bàn giao tài liệu, bản vẽ hoàn công', 'Bàn giao tài khoản quản trị']],
+    ['Thanh quyết toán', ['Hồ sơ thanh toán', 'Quyết toán hợp đồng', 'Thanh lý hợp đồng']],
+    ['Bảo hành – bảo trì', ['Lập lịch bảo trì định kỳ', 'Xử lý sự cố bảo hành', 'Giải tỏa bảo lãnh bảo hành']]
+  ]},
+  supply: {name: 'Cung cấp hàng hóa (không lắp đặt) – 6 hạng mục', folders: [
+    ['Hồ sơ – hợp đồng', ['Báo giá / hồ sơ dự thầu', 'Ký kết hợp đồng']],
+    ['Đặt hàng', ['Đặt hàng nhà cung cấp', 'Thanh toán đặt cọc NCC']],
+    ['Giao nhận hàng', ['Theo dõi vận chuyển', 'Kiểm đếm, đối chiếu serial', 'Biên bản giao nhận']],
+    ['Chứng từ', ['CO, CQ, hóa đơn', 'Hồ sơ chất lượng']],
+    ['Thanh toán', ['Hồ sơ thanh toán', 'Thanh lý hợp đồng']],
+    ['Bảo hành', ['Theo dõi bảo hành']]
+  ]}
+};
+
+/* ======================= TRẠNG THÁI ======================= */
+let data = {projects:[], tasks:[], members:[], fields:[]};
+let queue = [], syncing = false, syncErr = '', lastSync = 0, flushTimer = null;
+let me = {email:'', canEdit:true}, readOnly = false;
+let view = 'tasks', curProject = 'all', curFilter = 'all', setTabKey = 'mem';
+let editTaskId = null, editProjId = null, editMemberId = null, selColor = COLORS[0];
+let draftFolders = [], fileCtx = {files:[], added:[], removed:[], projectName:''};
+let collapsed = {}, sortables = [], CODE = {}, ORD = {}, lastStatsRows = [];
+
+const ls = {
+  get(k,d){ try{ const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; }catch(e){ return d; } },
+  set(k,v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} }
+};
+function persist(){ ls.set('todo.data',data); ls.set('todo.queue',queue); ls.set('todo.last',lastSync); }
+function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,8); }
+function esc(s){ return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function $(id){ return document.getElementById(id); }
+function hasGS(){ return typeof google !== 'undefined' && google.script && google.script.run; }
+function gsRun(fn, ...args){ return new Promise((res, rej) => google.script.run.withSuccessHandler(res).withFailureHandler(rej)[fn](...args)); }
+function closeM(id){ $(id).classList.remove('show'); }
+function fmtNum(n){ const x = Number(n); return isNaN(x) ? '' : x.toLocaleString('vi-VN'); }
+function byName(a,b){ return String(a.name||'').localeCompare(String(b.name||''),'vi'); }
+
+/* ======================= DỮ LIỆU ======================= */
+function normalize(){
+  ['projects','tasks','members','fields'].forEach(k => { if (!Array.isArray(data[k])) data[k] = []; });
+  data.projects.forEach(p => { if (!p.info || typeof p.info !== 'object') p.info = {}; if (!Array.isArray(p.folders)) p.folders = []; if (!Array.isArray(p.files)) p.files = []; });
+  data.tasks.forEach(t => { if (!Array.isArray(t.files)) t.files = []; });
+}
+const projById = id => data.projects.find(p => p.id === id);
+const taskById = id => data.tasks.find(t => t.id === id);
+const memberBy = email => email ? data.members.find(m => String(m.email||'').toLowerCase() === String(email).toLowerCase()) : null;
+function shortName(email){ if (!email) return ''; const m = memberBy(email); return m ? (m.name || m.fullName || email) : String(email).split('@')[0]; }
+function fullName(email){ if (!email) return ''; const m = memberBy(email); return m ? (m.fullName || m.name) + ' <' + email + '>' : email; }
+function sortedFields(){ return [...data.fields].sort((a,b) => (Number(a.sort)||0) - (Number(b.sort)||0) || String(a.label).localeCompare(String(b.label),'vi')); }
+function sortedMembers(){ return [...data.members].sort(byName); }
+
+/* ======================= NGÀY & TIẾN ĐỘ ======================= */
+function todayStr(){ const d = new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function daysLeft(due){ if(!due) return null; return Math.round((new Date(due+'T00:00:00') - new Date(todayStr()+'T00:00:00'))/86400000); }
+function fmtDate(s){ if(!s) return ''; const [y,m,d] = String(s).split('-'); return d+'/'+m+'/'+y; }
+function fmtShort(s){ if(!s) return ''; const [y,m,d] = String(s).split('-'); return d+'/'+m + (y != new Date().getFullYear() ? '/'+String(y).slice(2) : ''); }
+function prog(t){ return t.status === 'done' ? 100 : (Number(t.progress) || 0); }
+function dueState(t){
+  if (t.status === 'done' || !t.dueDate) return '';
+  const d = daysLeft(t.dueDate);
+  return d < 0 ? 'overdue' : d <= WARN_DAYS ? 'soon' : '';
+}
+function dueLabel(t){
+  if (!t.dueDate) return '';
+  const d = daysLeft(t.dueDate), s = fmtShort(t.dueDate);
+  if (t.status === 'done') return `<span class="small">${s}</span>`;
+  if (d < 0)   return `<span class="badge b-red" title="Hạn ${fmtDate(t.dueDate)}">Quá ${-d} ngày</span>`;
+  if (d === 0) return `<span class="badge b-orange">Hôm nay</span>`;
+  if (d <= WARN_DAYS) return `<span class="badge b-orange" title="Hạn ${fmtDate(t.dueDate)}">Còn ${d} ngày</span>`;
+  return `<span class="small" title="Hạn ${fmtDate(t.dueDate)}">📅 ${s}</span>`;
+}
+function avgPct(ts){ return ts.length ? Math.round(ts.reduce((a,t) => a + prog(t), 0) / ts.length) : 0; }
+function projStats(pid){
+  const ts = data.tasks.filter(t => t.projectId === pid);
+  return { n: ts.length, done: ts.filter(t => t.status === 'done').length,
+           overdue: ts.filter(t => dueState(t) === 'overdue').length,
+           soon: ts.filter(t => dueState(t) === 'soon').length, pct: avgPct(ts) };
+}
+const rawManual = (a,b) => (Number(a.sort)||0) - (Number(b.sort)||0) || (Number(a.createdAt)||0) - (Number(b.createdAt)||0);
+
+/* Đánh số đầu việc: <số hạng mục>.<thứ tự trong hạng mục> */
+function computeCodes(){
+  CODE = {}; ORD = {}; let n = 0;
+  [...data.projects].sort(byName).forEach(p => {
+    const fs = p.folders, fids = new Set(fs.map(f => f.id));
+    const ts = data.tasks.filter(t => t.projectId === p.id);
+    const groups = fs.map(f => ts.filter(t => t.folderId === f.id));
+    groups.push(ts.filter(t => !fids.has(t.folderId)));
+    groups.forEach((g, gi) => g.sort(rawManual).forEach((t, ti) => {
+      CODE[t.id] = fs.length ? `${gi+1}.${ti+1}` : `${ti+1}`; ORD[t.id] = n++;
+    }));
+  });
+  data.tasks.filter(t => !(t.id in ORD)).sort(rawManual).forEach((t, i) => { CODE[t.id] = String(i+1); ORD[t.id] = n++; });
+}
+function nextSort(pid, fid){
+  const p = projById(pid), fids = new Set(p ? p.folders.map(f => f.id) : []);
+  const same = data.tasks.filter(t => t.projectId === pid && (fid ? t.folderId === fid : !fids.has(t.folderId)));
+  return same.reduce((m,t) => Math.max(m, Number(t.sort)||0), 0) + 10;
+}
+
+/* ======================= ĐỒNG BỘ ======================= */
+function upsertLocal(type, rec){
+  const arr = data[TYPE_ARR[type]];
+  const i = arr.findIndex(x => x.id === rec.id);
+  if (rec.deleted) { if (i >= 0) arr.splice(i,1); return; }
+  if (i >= 0) arr[i] = Object.assign({}, arr[i], rec); else arr.push(Object.assign({}, rec));
+}
+function commitMany(type, recs){
+  if (readOnly) { alert('Bạn chỉ có quyền xem. Liên hệ chủ sở hữu để được cấp quyền chỉnh sửa.'); render(); return false; }
+  const now = Date.now();
+  recs.forEach(r => {
+    if (me.email) r.updatedBy = me.email;
+    r.updatedAt = now;
+    upsertLocal(type, r);
+    queue.push({type, record: r});
+  });
+  normalize(); persist(); render(); scheduleFlush();
+  return true;
+}
+function commit(type, rec){ return commitMany(type, [rec]); }
+function scheduleFlush(){ clearTimeout(flushTimer); flushTimer = setTimeout(flush, 800); }
+
+function flush(){
+  if (syncing) return;
+  if (!navigator.onLine || !hasGS()) { updateSync(); return; }
+  syncing = true; updateSync();
+  const batch = queue.slice();
+  google.script.run
+    .withSuccessHandler(res => {
+      queue = queue.slice(batch.length);
+      data = {projects: res.projects||[], tasks: res.tasks||[], members: res.members||[], fields: res.fields||[]};
+      queue.forEach(o => upsertLocal(o.type, o.record));
+      normalize();
+      lastSync = Date.now(); syncing = false; syncErr = '';
+      persist(); render();
+      if (queue.length) scheduleFlush();
+    })
+    .withFailureHandler(err => { syncing = false; syncErr = String((err && err.message) || err); updateSync(); })
+    .sync(batch);
+}
+
+function updateSync(){
+  const el = $('sync'), n = queue.length;
+  let cls = 'sync', txt;
+  if (syncing) txt = '⟳ Đang đồng bộ…';
+  else if (!navigator.onLine) { cls += ' off'; txt = '● Ngoại tuyến' + (n ? ` · ${n} chờ` : ''); }
+  else if (syncErr) { cls += ' err'; txt = '● Lỗi đồng bộ' + (n ? ` · ${n} chờ` : ''); }
+  else if (n) { cls += ' off'; txt = `● ${n} thay đổi chờ`; }
+  else { cls += ' ok'; txt = '● Đã đồng bộ' + (lastSync ? ' ' + new Date(lastSync).toLocaleTimeString('vi-VN',{hour:'2-digit',minute:'2-digit'}) : ''); }
+  el.className = cls; el.textContent = txt; el.title = syncErr;
+}
+
+/* ======================= HIỂN THỊ CHUNG ======================= */
+function render(){
+  computeCodes();
+  renderProjects();
+  $('pgTasks').style.display = view === 'tasks' ? '' : 'none';
+  $('pgStats').style.display = view === 'stats' ? '' : 'none';
+  $('fab').style.visibility = view === 'tasks' ? 'visible' : 'hidden';
+  $('vb_tasks').classList.toggle('on', view === 'tasks');
+  $('vb_stats').classList.toggle('on', view === 'stats');
+  if (view === 'tasks') renderMain(); else renderStats();
+  if ($('mSet').classList.contains('show')) renderSettings();
+  $('me').textContent = (me.email ? shortName(me.email) : '') + (readOnly ? ' · 👁 Chỉ xem' : '');
+  updateSync();
+}
+function setView(v){ view = v; render(); window.scrollTo(0,0); }
+
+function renderProjects(){
+  const all = data.tasks, ov = all.filter(t => dueState(t) === 'overdue').length, pct = avgPct(all);
+  let h = `<div class="proj ${curProject==='all'&&view==='tasks'?'active':''}" onclick="selProject('all')">
+    <div class="row"><span class="dot" style="background:var(--muted)"></span><span class="name">Tất cả công việc</span>${ov?`<span class="badge b-red">${ov}</span>`:''}</div>
+    <div class="bar"><i style="width:${pct}%"></i></div><div class="small">${all.length} việc · ${pct}%</div></div>`;
+  [...data.projects].sort(byName).forEach(p => {
+    const s = projStats(p.id), c = esc(p.color || COLORS[0]);
+    const warn = s.overdue ? `<span class="badge b-red" title="Quá hạn">${s.overdue}</span>` : s.soon ? `<span class="badge b-orange" title="Sắp hạn">${s.soon}</span>` : '';
+    h += `<div class="proj ${curProject===p.id&&view==='tasks'?'active':''}" onclick="selProject('${p.id}')">
+      <div class="row"><span class="dot" style="background:${c}"></span><span class="name">${esc(p.name)}</span>${warn}</div>
+      <div class="bar"><i style="width:${s.pct}%;background:${c}"></i></div><div class="small">${s.done}/${s.n} việc · ${s.pct}%</div></div>`;
+  });
+  h += `<div class="proj ro-hide" style="text-align:center;color:var(--pri);border-style:dashed;font-weight:600" onclick="openProject()">+ Dự án mới</div>`;
+  $('projects').innerHTML = h;
+}
+
+/* ======================= DANH SÁCH CÔNG VIỆC ======================= */
+function scopeTasks(){ return curProject === 'all' ? data.tasks : data.tasks.filter(t => t.projectId === curProject); }
+function match(t, f){
+  if (f === 'all') return true;
+  if (f === 'mine') return !!me.email && String(t.assignee||'').toLowerCase() === me.email;
+  if (f === 'done') return t.status === 'done';
+  if (f === 'doing') return t.status === 'doing';
+  return dueState(t) === f;
+}
+function cmpDue(a,b){ const x = a.dueDate || '9999', y = b.dueDate || '9999'; return x < y ? -1 : x > y ? 1 : 0; }
+function sortTasks(list, sort){
+  const man = (a,b) => (ORD[a.id]??0) - (ORD[b.id]??0);
+  return [...list].sort((a,b) => {
+    if (sort === 'manual') return man(a,b);
+    if ((a.status === 'done') !== (b.status === 'done')) return a.status === 'done' ? 1 : -1;
+    if (sort === 'priority') return (PRW[a.priority] ?? 1) - (PRW[b.priority] ?? 1) || cmpDue(a,b);
+    if (sort === 'updated') return (b.updatedAt||0) - (a.updatedAt||0);
+    return cmpDue(a,b) || man(a,b);
+  });
+}
+
+function renderAssigneeFilter(){
+  const cur = $('fa').value;
+  const emails = new Set(data.tasks.map(t => String(t.assignee||'').toLowerCase()).filter(Boolean));
+  sortedMembers().forEach(m => m.email && emails.add(String(m.email).toLowerCase()));
+  $('fa').innerHTML = '<option value="">👤 Mọi người nhận</option><option value="__none">Chưa giao</option>' +
+    [...emails].sort((a,b) => shortName(a).localeCompare(shortName(b),'vi')).map(e => `<option value="${esc(e)}">${esc(shortName(e))}</option>`).join('');
+  $('fa').value = [...$('fa').options].some(o => o.value === cur) ? cur : '';
+}
+
+function renderMain(){
+  if (curProject !== 'all' && !projById(curProject)) curProject = 'all';
+  renderAssigneeFilter();
+  const scope = scopeTasks();
+
+  // Cảnh báo
+  const ov = scope.filter(t => dueState(t) === 'overdue').length;
+  const td = scope.filter(t => t.status !== 'done' && daysLeft(t.dueDate) === 0).length;
+  const mine = scope.filter(t => match(t,'mine') && t.status !== 'done').length;
+  $('alert').innerHTML = (ov || td) ? `<div class="alert" onclick="setFilter('${ov?'overdue':'soon'}')">⚠ ${ov?`<b>${ov}</b> việc đã quá hạn`:''}${ov&&td?' · ':''}${td?`<b>${td}</b> việc đến hạn hôm nay`:''}${mine?` · bạn đang có <b>${mine}</b> việc được giao`:''} — bấm để xem</div>` : '';
+
+  renderProjectHead();
+
+  // Tab lọc kèm số lượng
+  $('tabs').innerHTML = FILTERS.map(([k,l]) => `<span class="tab ${curFilter===k?'active':''}" onclick="setFilter('${k}')">${l}<b>${scope.filter(t => match(t,k)).length}</b></span>`).join('');
+
+  const q = $('q').value.trim().toLowerCase(), sort = $('sort').value, fa = $('fa').value;
+  const visible = t => match(t, curFilter)
+    && (!q || (t.title + ' ' + (t.note||'') + ' ' + shortName(t.assignee)).toLowerCase().includes(q))
+    && (!fa || (fa === '__none' ? !t.assignee : String(t.assignee||'').toLowerCase() === fa));
+  const dragOn = curProject !== 'all' && curFilter === 'all' && !q && !fa && sort === 'manual' && !readOnly && typeof Sortable !== 'undefined';
+  $('hint').textContent = (curProject !== 'all' && !readOnly && !dragOn)
+    ? 'Kéo thả sắp xếp chỉ bật khi: tab "Tất cả", không tìm kiếm/lọc người, sắp xếp "Thứ tự thực hiện".'
+    : (dragOn ? 'Giữ ⋮⋮ để kéo đầu việc lên/xuống hoặc sang hạng mục khác; kéo ⋮⋮ ở tiêu đề để đổi thứ tự hạng mục.' : '');
+
+  if (curProject === 'all') {
+    const list = sortTasks(scope.filter(visible), sort);
+    $('list').innerHTML = list.length ? `<div class="tlist">${list.map(t => taskHtml(t, true, false)).join('')}</div>` : emptyHtml();
+    setupSortables(false);
+    return;
+  }
+
+  const p = projById(curProject), folders = p.folders, fids = new Set(folders.map(f => f.id));
+  const filtering = curFilter !== 'all' || q || fa;
+  const groupHtml = (g, idx, isNone) => {
+    const all = scope.filter(t => isNone ? !fids.has(t.folderId) : t.folderId === g.id);
+    const vis = sortTasks(all.filter(visible), sort);
+    if (!vis.length && filtering) return '';
+    const pct = avgPct(all), done = all.filter(t => t.status === 'done').length;
+    const key = p.id + ':' + g.id, col = collapsed[key] && !filtering;
+    return `<div class="group" data-folder="${g.id}">
+      <div class="ghead">${dragOn && !isNone ? '<span class="ghandle" title="Kéo để đổi thứ tự">⋮⋮</span>' : ''}
+        <span class="gtog" onclick="toggleGroup('${key}')">${col?'▸':'▾'}</span>
+        <b class="gname" onclick="toggleGroup('${key}')">${isNone ? '' : (idx+1)+'. '}${esc(g.name)}</b>
+        <span class="small">${done}/${all.length}</span><span class="bar mini"><i style="width:${pct}%"></i></span><span class="small">${pct}%</span>
+        <button class="ibtn ro-hide" title="Thêm đầu việc vào hạng mục" onclick="openTask(null,'${g.id}')">+</button>
+      </div>
+      ${col ? '' : `<div class="tlist" data-folder="${g.id}">${vis.map(t => taskHtml(t, false, dragOn)).join('')}</div>`}
+    </div>`;
+  };
+  let html = '<div id="groups">' + folders.map((f,i) => groupHtml(f, i, false)).join('') + '</div>';
+  const noneCount = scope.filter(t => !fids.has(t.folderId)).length;
+  if (noneCount || !folders.length) html += groupHtml({id:'__none', name: folders.length ? 'Chưa phân loại' : 'Đầu việc'}, folders.length, true);
+  $('list').innerHTML = html.includes('class="group"') ? html : emptyHtml();
+  setupSortables(dragOn);
+}
+function emptyHtml(){ return `<div class="empty">Không có công việc nào.${readOnly?'':'<br><br><button class="btn primary" onclick="openTask()">+ Thêm công việc</button>'}</div>`; }
+
+function renderProjectHead(){
+  if (curProject === 'all') { $('phead').innerHTML = ''; return; }
+  const p = projById(curProject), s = projStats(p.id), c = esc(p.color || COLORS[0]);
+  let dl = '';
+  if (p.dueDate) {
+    const d = daysLeft(p.dueDate);
+    dl = (s.pct < 100 && d < 0) ? `<span class="badge b-red">⚠ Dự án quá hạn ${-d} ngày</span>`
+       : (s.pct < 100 && d <= WARN_DAYS*2) ? `<span class="badge b-orange">Hạn ${fmtDate(p.dueDate)} · còn ${d} ngày</span>`
+       : `<span class="badge b-gray">Hạn ${fmtDate(p.dueDate)}</span>`;
+  }
+  const chips = sortedFields().filter(f => p.info[f.id] !== undefined && p.info[f.id] !== '').map(f => {
+    const v = p.info[f.id];
+    const val = f.type === 'number' ? fmtNum(v) : f.type === 'date' ? fmtDate(v) : esc(v);
+    return `<span class="ichip"><span class="small">${esc(f.label)}:</span> <b>${val}</b>${f.unit && f.type==='number' ? ' '+esc(f.unit) : ''}</span>`;
+  });
+  const files = p.files.length ? `<div class="files" style="margin-top:8px">${p.files.map(fileRow).join('')}</div>` : '';
+  const open = ls.get('todo.infoOpen', false);
+  $('phead').innerHTML = `<div class="phead">
+    <div class="row"><span class="dot" style="background:${c};width:14px;height:14px"></span><b style="font-size:16px;flex:1">${esc(p.name)}</b><button class="btn" onclick="openProject('${p.id}')">${readOnly ? 'Xem' : '✎ Sửa'}</button></div>
+    <div class="bar" style="height:9px"><i style="width:${s.pct}%;background:${c}"></i></div>
+    <div class="row" style="flex-wrap:wrap;margin-top:5px;gap:10px"><b>${s.pct}% hoàn thành</b><span class="small">${s.done}/${s.n} việc xong</span>${s.overdue?`<span class="badge b-red">${s.overdue} quá hạn</span>`:''}${dl}</div>
+    ${(chips.length || p.note || files) ? `<details ${open?'open':''} ontoggle="ls.set('todo.infoOpen',this.open)"><summary>Thông tin dự án${chips.length?` (${chips.length})`:''}${p.files.length?` · 📎${p.files.length}`:''}</summary>
+      ${chips.length ? `<div class="chips">${chips.join('')}</div>` : ''}
+      ${p.note ? `<div class="small" style="margin-top:8px;white-space:pre-wrap">${esc(p.note)}</div>` : ''}${files}</details>` : ''}
+  </div>`;
+}
+
+function taskHtml(t, showProj, drag){
+  const p = showProj ? projById(t.projectId) : null, pg = prog(t), done = t.status === 'done';
+  const pc = p ? esc(p.color || COLORS[0]) : '';
+  const nFiles = t.files.length;
+  let who = '';
+  if (t.assignee) {
+    const from = t.assigner && String(t.assigner).toLowerCase() !== String(t.assignee).toLowerCase() ? esc(shortName(t.assigner)) + ' → ' : '';
+    who = `<span class="who" title="Giao: ${esc(fullName(t.assigner))}&#10;Nhận: ${esc(fullName(t.assignee))}">${from}<b>${esc(shortName(t.assignee))}</b></span>`;
+  }
+  const pgHtml = done ? '<span class="done-badge">✓ Done</span>'
+    : `<span class="pg"><span class="bar mini"><i style="width:${pg}%"></i></span>${pg}%</span>`;
+  return `<div class="task ${dueState(t)} ${done?'done':''}" data-id="${t.id}" onclick="openTask('${t.id}')">
+    ${drag ? '<span class="handle" onclick="event.stopPropagation()" title="Kéo để sắp xếp">⋮⋮</span>' : ''}
+    <span class="code">${CODE[t.id]||''}</span>
+    <input type="checkbox" class="check" ${done?'checked':''} onclick="event.stopPropagation();toggleDone('${t.id}')">
+    <span class="title">${t.priority==='high'?'<span class="hi" title="Ưu tiên cao">!</span>':''}${esc(t.title)}</span>
+    <span class="tmeta">
+      ${p ? `<span class="pchip" style="background:${pc}22;color:${pc}">${esc(p.name)}</span>` : ''}
+      ${who}<span class="due">${dueLabel(t)}</span>
+      ${nFiles ? `<span class="small" title="${nFiles} tệp đính kèm">📎${nFiles}</span>` : ''}
+      ${t.note ? '<span class="small" title="Có ghi chú">📝</span>' : ''}
+      ${pgHtml}
+    </span></div>`;
+}
+
+/* ---- Kéo thả ---- */
+function setupSortables(on){
+  sortables.forEach(s => { try { s.destroy(); } catch(e){} });
+  sortables = [];
+  if (!on) return;
+  document.querySelectorAll('.tlist').forEach(el => sortables.push(Sortable.create(el, {
+    group: 'tasks', handle: '.handle', draggable: '.task', animation: 150, onEnd: reorderFromDom
+  })));
+  const g = $('groups');
+  if (g) sortables.push(Sortable.create(g, { handle: '.ghandle', draggable: '.group', animation: 150, onEnd: reorderFolders }));
+}
+function reorderFromDom(){
+  const recs = [];
+  document.querySelectorAll('.tlist').forEach(list => {
+    const fid = list.dataset.folder === '__none' ? '' : list.dataset.folder;
+    [...list.querySelectorAll('.task')].forEach((el, i) => {
+      const t = taskById(el.dataset.id); if (!t) return;
+      const s = (i + 1) * 10;
+      const curFid = (projById(t.projectId)?.folders || []).some(f => f.id === t.folderId) ? t.folderId : '';
+      if (Number(t.sort) !== s || curFid !== fid) recs.push(Object.assign({}, t, {sort: s, folderId: fid}));
+    });
+  });
+  if (recs.length) commitMany('task', recs); else render();
+}
+function reorderFolders(){
+  const p = projById(curProject); if (!p) return;
+  const ids = [...$('groups').children].map(e => e.dataset.folder);
+  const nf = ids.map(id => p.folders.find(f => f.id === id)).filter(Boolean);
+  p.folders.forEach(f => { if (!nf.includes(f)) nf.push(f); });
+  commit('project', Object.assign({}, p, {folders: nf}));
+}
+function toggleGroup(key){ collapsed[key] = !collapsed[key]; ls.set('todo.collapsed', collapsed); renderMain(); }
+
+/* ======================= THAO TÁC CÔNG VIỆC ======================= */
+function selProject(id){ curProject = id; view = 'tasks'; render(); window.scrollTo(0,0); }
+function setFilter(k){ curFilter = k; renderMain(); }
+
+function toggleDone(id){
+  const t = taskById(id); if (!t) return;
+  const r = Object.assign({}, t);
+  if (r.status === 'done') { r.status = 'doing'; r.progress = 90; } else { r.status = 'done'; r.progress = 100; }
+  commit('task', r);
+}
+
+function memberOptions(){
+  return sortedMembers().filter(m => m.email).map(m =>
+    `<option value="${esc(String(m.email).toLowerCase())}">${esc(m.name)}${m.unit ? ' – ' + esc(m.unit) : ''}</option>`).join('');
+}
+function ensureOpt(selId, val){
+  if (val && ![...$(selId).options].some(o => o.value === val))
+    $(selId).insertAdjacentHTML('beforeend', `<option value="${esc(val)}">${esc(val)}</option>`);
+}
+function fillFolders(sel){
+  const p = projById($('t_project').value), fs = p ? p.folders : [];
+  $('t_folder').innerHTML = '<option value="">— Chưa phân loại —</option>' + fs.map((f,i) => `<option value="${f.id}">${i+1}. ${esc(f.name)}</option>`).join('');
+  $('t_folder').value = sel && fs.some(f => f.id === sel) ? sel : '';
+  $('t_folder').disabled = !p || readOnly;
+}
+
+function openTask(id, folderId){
+  editTaskId = id || null;
+  const t = id ? taskById(id) : null;
+  $('t_project').innerHTML = '<option value="">— Không thuộc dự án —</option>' +
+    [...data.projects].sort(byName).map(p => `<option value="${p.id}">${esc(p.name)}</option>`).join('');
+  $('t_project').value = t ? (t.projectId || '') : (curProject === 'all' ? '' : curProject);
+  fillFolders(t ? t.folderId : (folderId && folderId !== '__none' ? folderId : ''));
+
+  const opts = memberOptions();
+  const meOpt = me.email && !memberBy(me.email) ? `<option value="${esc(me.email)}">Tôi (${esc(me.email)})</option>` : '';
+  $('t_assigner').innerHTML = '<option value="">—</option>' + meOpt + opts;
+  $('t_assignee').innerHTML = '<option value="">— Chưa giao —</option>' + opts;
+  ensureOpt('t_assigner', t && t.assigner); ensureOpt('t_assignee', t && t.assignee);
+  $('t_assigner').value = t ? (t.assigner || '') : (me.email || '');
+  $('t_assignee').value = t ? (t.assignee || '') : '';
+
+  $('tTitle').textContent = t ? `Đầu việc ${CODE[t.id] || ''}` : 'Đầu việc mới';
+  $('t_title').value    = t ? t.title : '';
+  $('t_status').value   = t ? (t.status || 'todo') : 'todo';
+  $('t_priority').value = t ? (t.priority || 'med') : 'med';
+  $('t_start').value    = t ? (t.startDate || '') : todayStr();
+  $('t_due').value      = t ? (t.dueDate || '') : '';
+  $('t_progress').value = t ? prog(t) : 0;
+  $('t_pv').textContent = $('t_progress').value;
+  $('t_note').value     = t ? (t.note || '') : '';
+  $('t_del').style.display = t ? '' : 'none';
+  $('t_meta').textContent = (t && t.updatedAt)
+    ? 'Cập nhật: ' + new Date(Number(t.updatedAt)).toLocaleString('vi-VN') + (t.updatedBy ? ' · bởi ' + shortName(t.updatedBy) : '') : '';
+  ['t_title','t_project','t_assigner','t_assignee','t_status','t_priority','t_start','t_due','t_progress','t_note'].forEach(i => $(i).disabled = readOnly);
+
+  const pr = projById($('t_project').value);
+  fileCtx = {files: t ? [...t.files] : [], added: [], removed: [], projectName: pr ? pr.name : 'Chung'};
+  renderFiles('t_files'); $('t_files_st').textContent = '';
+  $('mTask').classList.add('show');
+  if (!t && !readOnly) setTimeout(() => $('t_title').focus(), 50);
+}
+function onAssignee(){ if ($('t_assignee').value && !$('t_assigner').value && me.email) { ensureOpt('t_assigner', me.email); $('t_assigner').value = me.email; } }
+function onProg(){
+  const v = +$('t_progress').value; $('t_pv').textContent = v;
+  if (v === 100) $('t_status').value = 'done';
+  else if (v > 0) $('t_status').value = 'doing';
+  else if ($('t_status').value === 'done') $('t_status').value = 'todo';
+}
+function onStatus(){
+  const s = $('t_status').value;
+  if (s === 'done') $('t_progress').value = 100;
+  else if (+$('t_progress').value === 100) $('t_progress').value = (s === 'doing' ? 50 : 0);
+  $('t_pv').textContent = $('t_progress').value;
+}
+function saveTask(){
+  const title = $('t_title').value.trim();
+  if (!title) { $('t_title').focus(); return; }
+  if ($('t_start').value && $('t_due').value && $('t_due').value < $('t_start').value) { alert('Hạn chót phải sau ngày bắt đầu.'); return; }
+  const old = editTaskId ? taskById(editTaskId) : null;
+  const pid = $('t_project').value, fid = $('t_folder').value;
+  let sort = old ? old.sort : 0;
+  if (!old || old.projectId !== pid || (old.folderId || '') !== fid) sort = nextSort(pid, fid);
+  const r = Object.assign({id: uid(), createdAt: Date.now(), deleted: false}, old || {}, {
+    projectId: pid, folderId: fid, sort, title,
+    assigner: $('t_assigner').value, assignee: $('t_assignee').value,
+    status: $('t_status').value, priority: $('t_priority').value, progress: +$('t_progress').value,
+    startDate: $('t_start').value, dueDate: $('t_due').value, note: $('t_note').value, files: fileCtx.files
+  });
+  if (r.assignee && !r.assigner) r.assigner = me.email;
+  if (commit('task', r)) { finishFiles(true); closeM('mTask'); }
+}
+function closeTask(){ finishFiles(false); closeM('mTask'); }
+function delTask(){
+  const t = taskById(editTaskId);
+  if (!t || !confirm('Xoá đầu việc "' + t.title + '"' + (t.files.length ? ' và ' + t.files.length + ' tệp đính kèm' : '') + '?')) return;
+  const ids = t.files.map(f => f.id).concat(fileCtx.added);
+  if (commit('task', Object.assign({}, t, {deleted: true}))) {
+    if (ids.length && hasGS()) google.script.run.withFailureHandler(()=>{}).deleteFiles(ids);
+    fileCtx = {files:[], added:[], removed:[]}; closeM('mTask');
+  }
+}
+
+/* ======================= TỆP ĐÍNH KÈM ======================= */
+function fileIcon(m){ m = String(m||''); return m.startsWith('image/') ? '🖼' : m.includes('pdf') ? '📕' : /word|document/.test(m) ? '📘' : /sheet|excel/.test(m) ? '📗' : /presentation|powerpoint/.test(m) ? '📙' : /zip|compressed/.test(m) ? '🗜' : '📄'; }
+function fmtSize(b){ b = Number(b)||0; return b > 1048576 ? (b/1048576).toFixed(1)+' MB' : Math.max(1, Math.round(b/1024)) + ' KB'; }
+function fileRow(f, i, editable){
+  const thumb = String(f.mime||'').startsWith('image/')
+    ? `<img src="https://drive.google.com/thumbnail?id=${encodeURIComponent(f.id)}&sz=w120" onerror="this.outerHTML='<span class=&quot;ficon&quot;>🖼</span>'" alt="">`
+    : `<span class="ficon">${fileIcon(f.mime)}</span>`;
+  return `<div class="file">${thumb}<div class="fbody"><a href="${esc(f.url)}" target="_blank" rel="noopener">${esc(f.name)}</a>
+    <span class="small">${fmtSize(f.size)}${f.by ? ' · ' + esc(shortName(f.by)) : ''}${f.at ? ' · ' + new Date(Number(f.at)).toLocaleDateString('vi-VN') : ''}</span></div>
+    ${editable === true && !readOnly ? `<button class="ibtn" title="Gỡ tệp" onclick="removeFile(${i},this.closest('.files').id)">✕</button>` : ''}</div>`;
+}
+function renderFiles(elId){
+  $(elId).innerHTML = fileCtx.files.map((f,i) => fileRow(f, i, true)).join('') || '<span class="small">Chưa có tệp</span>';
+}
+function removeFile(i, elId){
+  const f = fileCtx.files.splice(i, 1)[0];
+  if (f) fileCtx.removed.push(f.id);
+  renderFiles(elId);
+}
+function readB64(file){ return new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(String(r.result).split(',')[1]); r.onerror = rej; r.readAsDataURL(file); }); }
+function compressImage(file){
+  return new Promise(res => {
+    if (!/^image\/(jpeg|png|webp)$/.test(file.type)) return res(null);
+    const img = new Image(), url = URL.createObjectURL(file);
+    img.onload = () => {
+      const max = 1920, w = img.naturalWidth, h = img.naturalHeight;
+      URL.revokeObjectURL(url);
+      if (w <= max && h <= max && file.size < 1.5e6) return res(null);
+      const s = Math.min(1, max / Math.max(w, h)), c = document.createElement('canvas');
+      c.width = Math.round(w*s); c.height = Math.round(h*s);
+      const ctx = c.getContext('2d'); ctx.fillStyle = '#fff'; ctx.fillRect(0,0,c.width,c.height); ctx.drawImage(img, 0, 0, c.width, c.height);
+      res(c.toDataURL('image/jpeg', 0.82));
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); res(null); };
+    img.src = url;
+  });
+}
+async function uploadFiles(input, elId){
+  const files = [...input.files]; input.value = '';
+  if (!files.length) return;
+  if (!navigator.onLine || !hasGS()) { alert('Cần có kết nối mạng để tải tệp lên.'); return; }
+  if (elId === 'p_files') fileCtx.projectName = $('p_name').value.trim() || 'Dự án mới';
+  else { const pr = projById($('t_project').value); fileCtx.projectName = pr ? pr.name : 'Chung'; }
+  const st = $(elId + '_st');
+  for (const f of files) {
+    try {
+      st.textContent = `⏳ Đang tải ${f.name}…`;
+      let b64, name = f.name, mime = f.type || 'application/octet-stream';
+      const comp = await compressImage(f);
+      if (comp) { b64 = comp.split(',')[1]; mime = 'image/jpeg'; name = name.replace(/\.\w+$/, '') + '.jpg'; }
+      else {
+        if (f.size > MAX_UPLOAD) { alert(`"${f.name}" lớn hơn ${MAX_UPLOAD/1048576}MB. Hãy tải trực tiếp lên Drive rồi dán link vào ghi chú.`); continue; }
+        b64 = await readB64(f);
+      }
+      const meta = await gsRun('uploadFile', {name, mime, projectName: fileCtx.projectName}, b64);
+      fileCtx.files.push(meta); fileCtx.added.push(meta.id);
+      renderFiles(elId);
+    } catch (e) { alert('Tải tệp lỗi: ' + ((e && e.message) || e)); }
+  }
+  st.textContent = '';
+}
+/* Lưu → xoá các tệp đã gỡ ; Đóng không lưu → xoá các tệp vừa tải lên */
+function finishFiles(saved){
+  const ids = saved ? fileCtx.removed : fileCtx.added;
+  if (ids.length && navigator.onLine && hasGS()) google.script.run.withFailureHandler(()=>{}).deleteFiles(ids);
+  fileCtx = {files:[], added:[], removed:[], projectName:''};
+}
+
+/* ======================= DỰ ÁN ======================= */
+function openProject(id){
+  editProjId = id || null;
+  const p = id ? projById(id) : null;
+  $('pTitle').textContent = p ? 'Dự án: ' + p.name : 'Dự án mới';
+  $('p_name').value = p ? p.name : '';
+  $('p_due').value  = p ? (p.dueDate || '') : '';
+  $('p_note').value = p ? (p.note || '') : '';
+  ['p_name','p_due','p_note'].forEach(i => $(i).disabled = readOnly);
+  selColor = p ? (p.color || COLORS[0]) : COLORS[data.projects.length % COLORS.length];
+  renderSw();
+  renderInfoFields(p ? p.info : {});
+  draftFolders = p ? p.folders.map(f => ({id: f.id, name: f.name})) : [];
+  $('p_tpl').innerHTML = `<option value="">${p ? '➕ Thêm hạng mục từ mẫu…' : '📁 Chọn mẫu hạng mục…'}</option>` +
+    Object.entries(TEMPLATES).map(([k,t]) => `<option value="${k}">${esc(t.name)}</option>`).join('');
+  $('p_tasks').checked = false; $('p_tasks_wrap').style.display = 'none';
+  if (!p) { $('p_tpl').value = 'basic'; applyTpl(); }
+  renderFolders();
+  fileCtx = {files: p ? [...p.files] : [], added: [], removed: [], projectName: p ? p.name : ''};
+  renderFiles('p_files'); $('p_files_st').textContent = '';
+  $('p_del').style.display = p ? '' : 'none';
+  $('mProj').classList.add('show');
+  if (!p) setTimeout(() => $('p_name').focus(), 50);
+}
+function renderSw(){
+  $('p_colors').innerHTML = COLORS.map(c => `<span class="sw ${c===selColor?'sel':''}" style="background:${c}" onclick="${readOnly?'':`selColor='${c}';renderSw()`}"></span>`).join('');
+}
+function renderInfoFields(info){
+  const fs = sortedFields();
+  if (!fs.length) { $('p_info').innerHTML = '<div class="small">Chưa có trường nào. Bấm "⚙ Sửa danh sách trường" để thêm.</div>'; return; }
+  const groups = [];
+  fs.forEach(f => { const g = f.group || 'Khác'; let x = groups.find(y => y.name === g); if (!x) groups.push(x = {name: g, fields: []}); x.fields.push(f); });
+  const dis = readOnly ? 'disabled' : '';
+  $('p_info').innerHTML = groups.map(g => `<div class="small" style="font-weight:700;margin:6px 0 4px">${esc(g.name)}</div><div class="grid2">${g.fields.map(f => {
+    const v = info[f.id] ?? '', id = 'pf_' + f.id, lbl = esc(f.label) + (f.unit ? ` <span class="small">(${esc(f.unit)})</span>` : '');
+    let inp;
+    if (f.type === 'number') inp = `<input id="${id}" type="number" step="any" inputmode="decimal" value="${esc(v)}" ${dis}>`;
+    else if (f.type === 'date') inp = `<input id="${id}" type="date" value="${esc(v)}" ${dis}>`;
+    else if (f.type === 'select') {
+      const opts = String(f.options||'').split(',').map(s => s.trim()).filter(Boolean);
+      if (v && !opts.includes(v)) opts.push(v);
+      inp = `<select id="${id}" ${dis}><option value="">—</option>${opts.map(o => `<option ${o===v?'selected':''}>${esc(o)}</option>`).join('')}</select>`;
+    } else inp = `<input id="${id}" value="${esc(v)}" ${dis}>`;
+    return `<div class="field"><label>${lbl}</label>${inp}</div>`;
+  }).join('')}</div>`).join('');
+}
+function collectInfo(old){
+  const info = Object.assign({}, old || {});
+  sortedFields().forEach(f => {
+    const el = $('pf_' + f.id); if (!el) return;
+    let v = el.value.trim();
+    if (f.type === 'number' && v !== '') v = Number(v);
+    if (v === '' || (typeof v === 'number' && isNaN(v))) delete info[f.id]; else info[f.id] = v;
+  });
+  return info;
+}
+function renderFolders(){
+  const dis = readOnly ? 'disabled' : '';
+  const counts = {};
+  if (editProjId) data.tasks.filter(t => t.projectId === editProjId).forEach(t => counts[t.folderId] = (counts[t.folderId]||0) + 1);
+  $('p_folders').innerHTML = draftFolders.map((f,i) => `<div class="frow">
+    <span class="code">${i+1}.</span>
+    <input value="${esc(f.name)}" oninput="draftFolders[${i}].name=this.value" ${dis}>
+    <span class="small" style="min-width:42px">${counts[f.id] ? counts[f.id] + ' việc' : ''}</span>
+    <button class="ibtn ro-hide" onclick="mvFolder(${i},-1)" title="Lên">↑</button>
+    <button class="ibtn ro-hide" onclick="mvFolder(${i},1)" title="Xuống">↓</button>
+    <button class="ibtn ro-hide" onclick="rmFolder(${i})" title="Xoá">✕</button></div>`).join('')
+    || '<div class="small">Chưa có hạng mục – các đầu việc sẽ nằm chung một danh sách.</div>';
+}
+function mvFolder(i, d){ const j = i + d; if (j < 0 || j >= draftFolders.length) return; [draftFolders[i], draftFolders[j]] = [draftFolders[j], draftFolders[i]]; renderFolders(); }
+function rmFolder(i){
+  const f = draftFolders[i];
+  const n = editProjId ? data.tasks.filter(t => t.projectId === editProjId && t.folderId === f.id).length : 0;
+  if (n && !confirm(`Hạng mục "${f.name}" có ${n} đầu việc. Xoá hạng mục thì các đầu việc chuyển sang "Chưa phân loại". Tiếp tục?`)) return;
+  draftFolders.splice(i, 1); renderFolders();
+}
+function addFolder(){
+  draftFolders.push({id: uid(), name: 'Hạng mục mới'}); renderFolders();
+  const ins = $('p_folders').querySelectorAll('input'); const last = ins[ins.length-1]; if (last) { last.focus(); last.select(); }
+}
+function applyTpl(){
+  const tp = TEMPLATES[$('p_tpl').value]; if (!tp) return;
+  if (!editProjId) {
+    draftFolders = tp.folders.map(([n]) => ({id: uid(), name: n}));
+    const hasTasks = tp.folders.some(([,ts]) => ts.length);
+    $('p_tasks_wrap').style.display = hasTasks ? 'block' : 'none';
+    $('p_tasks').checked = hasTasks;
+  } else {
+    const have = new Set(draftFolders.map(f => f.name.trim().toLowerCase()));
+    tp.folders.forEach(([n]) => { if (!have.has(n.toLowerCase())) draftFolders.push({id: uid(), name: n}); });
+    $('p_tpl').value = '';
+  }
+  renderFolders();
+}
+function saveProject(){
+  const name = $('p_name').value.trim();
+  if (!name) { $('p_name').focus(); return; }
+  const old = editProjId ? projById(editProjId) : null;
+  const folders = draftFolders.map(f => ({id: f.id, name: f.name.trim()})).filter(f => f.name);
+  const r = Object.assign({id: uid(), createdAt: Date.now(), deleted: false}, old || {}, {
+    name, color: selColor, dueDate: $('p_due').value, note: $('p_note').value,
+    info: collectInfo(old && old.info), folders, files: fileCtx.files
+  });
+  const tp = TEMPLATES[$('p_tpl').value];
+  const tasks = [];
+  if (!old && tp && $('p_tasks').checked) {
+    const now = Date.now();
+    folders.forEach(f => {
+      const src = tp.folders.find(([n]) => n.toLowerCase() === f.name.toLowerCase());
+      (src ? src[1] : []).forEach((title, i) => tasks.push({
+        id: uid(), projectId: r.id, folderId: f.id, sort: (i+1)*10, title, note: '', status: 'todo', priority: 'med',
+        progress: 0, startDate: '', dueDate: '', assignee: '', assigner: '', files: [], createdAt: now + i, deleted: false
+      }));
+    });
+  }
+  if (!commit('project', r)) return;
+  if (tasks.length) commitMany('task', tasks);
+  finishFiles(true);
+  if (!old) curProject = r.id;
+  closeM('mProj'); view = 'tasks'; render();
+}
+function closeProject(){ finishFiles(false); closeM('mProj'); }
+function delProject(){
+  const p = projById(editProjId); if (!p) return;
+  const ts = data.tasks.filter(t => t.projectId === p.id);
+  if (!confirm(`Xoá dự án "${p.name}" cùng ${ts.length} đầu việc và các tệp đính kèm?`)) return;
+  const fileIds = p.files.map(f => f.id).concat(...ts.map(t => t.files.map(f => f.id)), fileCtx.added);
+  const recs = ts.map(t => Object.assign({}, t, {deleted: true}));
+  if (recs.length && !commitMany('task', recs)) return;
+  commit('project', Object.assign({}, p, {deleted: true}));
+  if (fileIds.length && hasGS()) google.script.run.withFailureHandler(()=>{}).deleteFiles(fileIds);
+  fileCtx = {files:[], added:[], removed:[]};
+  curProject = 'all'; closeM('mProj'); render();
+}
+
+/* ======================= CÀI ĐẶT: THÀNH VIÊN & TRƯỜNG ======================= */
+function openSettings(tab){ if (tab) setTabKey = tab; $('mSet').classList.add('show'); setTab(setTabKey); }
+function setTab(k){
+  setTabKey = k;
+  $('st_mem').classList.toggle('active', k === 'mem'); $('st_fld').classList.toggle('active', k === 'fld');
+  $('paneMem').style.display = k === 'mem' ? '' : 'none'; $('paneFld').style.display = k === 'fld' ? '' : 'none';
+  renderSettings(true);
+}
+function renderSettings(force){
+  // không vẽ lại khi người dùng đang gõ trong bảng
+  const ae = document.activeElement;
+  if (!force && ae && ($('memList').contains(ae) || $('fldList').contains(ae))) return;
+  if (setTabKey === 'mem') renderMemberList(); else renderFieldList();
+}
+function renderMemberList(){
+  const ms = sortedMembers();
+  const cnt = e => data.tasks.filter(t => String(t.assignee||'').toLowerCase() === String(e||'').toLowerCase() && t.status !== 'done').length;
+  const addMe = me.email && !memberBy(me.email) && !readOnly ? `<div class="alert" style="background:#eff6ff;border-color:#93c5fd;color:#1e40af" onclick="prefillMe()">Bạn (${esc(me.email)}) chưa có trong danh sách – bấm để thêm mình.</div>` : '';
+  $('memList').innerHTML = addMe + (ms.length ? `<div class="tbl-wrap"><table class="tbl"><tr><th>Tên ngắn</th><th>Họ tên</th><th>Email</th><th>Đơn vị / chức vụ</th><th>SĐT</th><th class="num">Việc đang giữ</th><th></th></tr>
+    ${ms.map(m => `<tr><td><b>${esc(m.name)}</b></td><td>${esc(m.fullName)}</td><td>${esc(m.email)}</td><td>${esc(m.unit)}</td><td>${esc(m.phone)}</td><td class="num">${cnt(m.email)}</td>
+      <td class="ro-hide" style="white-space:nowrap"><button class="ibtn" title="Sửa" onclick="editMember('${m.id}')">✎</button> <button class="ibtn" title="Xoá" onclick="delMember('${m.id}')">✕</button></td></tr>`).join('')}
+    </table></div>` : '<div class="empty">Chưa có thành viên nào.</div>');
+}
+function prefillMe(){ clearMemberForm(); $('m_email').value = me.email; $('m_name').focus(); }
+function clearMemberForm(){
+  editMemberId = null; ['m_name','m_full','m_email','m_unit','m_phone'].forEach(i => $(i).value = '');
+  $('m_save').textContent = '+ Thêm'; $('m_cancel').style.display = 'none';
+}
+function editMember(id){
+  const m = data.members.find(x => x.id === id); if (!m) return;
+  editMemberId = id; $('m_name').value = m.name||''; $('m_full').value = m.fullName||''; $('m_email').value = m.email||''; $('m_unit').value = m.unit||''; $('m_phone').value = m.phone||'';
+  $('m_save').textContent = 'Lưu'; $('m_cancel').style.display = ''; $('m_name').focus();
+}
+function saveMember(){
+  const name = $('m_name').value.trim(), email = $('m_email').value.trim().toLowerCase();
+  if (!name || !email) { alert('Nhập Tên ngắn và Email.'); return; }
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { alert('Email không hợp lệ.'); return; }
+  const dup = data.members.find(m => String(m.email).toLowerCase() === email && m.id !== editMemberId);
+  if (dup) { alert('Email này đã có trong danh sách (' + dup.name + ').'); return; }
+  const old = editMemberId ? data.members.find(x => x.id === editMemberId) : null;
+  if (commit('member', Object.assign({id: uid(), createdAt: Date.now(), deleted: false}, old || {}, {
+    name, fullName: $('m_full').value.trim(), email, unit: $('m_unit').value.trim(), phone: $('m_phone').value.trim()
+  }))) { clearMemberForm(); renderSettings(true); }
+}
+function delMember(id){
+  const m = data.members.find(x => x.id === id); if (!m) return;
+  const n = data.tasks.filter(t => String(t.assignee||'').toLowerCase() === String(m.email).toLowerCase()).length;
+  if (!confirm(`Xoá thành viên "${m.name}"?${n ? `\n(${n} đầu việc đang giao cho người này vẫn giữ nguyên email.)` : ''}`)) return;
+  commit('member', Object.assign({}, m, {deleted: true})); renderSettings(true);
+}
+
+function renderFieldList(){
+  const fs = sortedFields(), dis = readOnly ? 'disabled' : '';
+  const groups = [...new Set(fs.map(f => f.group).filter(Boolean))];
+  $('fldList').innerHTML = `<div class="tbl-wrap"><table class="tbl"><tr><th>Nhóm</th><th>Tên trường</th><th>Kiểu</th><th>Đơn vị</th><th>Các lựa chọn (cách nhau dấu phẩy)</th><th></th></tr>
+    ${fs.map((f,i) => `<tr>
+      <td><input value="${esc(f.group)}" list="grpList" onchange="updField('${f.id}','group',this.value)" ${dis}></td>
+      <td><input value="${esc(f.label)}" onchange="updField('${f.id}','label',this.value)" ${dis} style="min-width:160px"></td>
+      <td><select onchange="updField('${f.id}','type',this.value)" ${dis}>${FTYPES.map(([k,l]) => `<option value="${k}" ${f.type===k?'selected':''}>${l}</option>`).join('')}</select></td>
+      <td><input value="${esc(f.unit)}" onchange="updField('${f.id}','unit',this.value)" ${dis} style="min-width:60px;width:70px"></td>
+      <td>${f.type === 'select' ? `<input value="${esc(f.options)}" placeholder="VD: Đang làm, Xong" onchange="updField('${f.id}','options',this.value)" ${dis} style="min-width:200px">` : '<span class="small">–</span>'}</td>
+      <td class="ro-hide" style="white-space:nowrap"><button class="ibtn" onclick="mvField(${i},-1)">↑</button> <button class="ibtn" onclick="mvField(${i},1)">↓</button> <button class="ibtn" onclick="delField('${f.id}')">✕</button></td>
+    </tr>`).join('')}</table></div><datalist id="grpList">${groups.map(g => `<option value="${esc(g)}">`).join('')}</datalist>`;
+}
+function updField(id, k, v){
+  const f = data.fields.find(x => x.id === id); if (!f) return;
+  v = String(v).trim();
+  if (k === 'label' && !v) { renderSettings(true); return; }
+  commit('field', Object.assign({}, f, {[k]: v}));
+  setTimeout(() => renderSettings(true), 0);
+}
+function mvField(i, d){
+  const fs = sortedFields(), j = i + d; if (j < 0 || j >= fs.length) return;
+  [fs[i], fs[j]] = [fs[j], fs[i]];
+  const recs = fs.map((f, k) => Number(f.sort) === (k+1)*10 ? null : Object.assign({}, f, {sort: (k+1)*10})).filter(Boolean);
+  commitMany('field', recs); renderSettings(true);
+}
+function addField(){
+  const fs = sortedFields(), last = fs[fs.length-1];
+  commit('field', {id: uid(), label: 'Trường mới', type: 'number', unit: '', group: last ? last.group : 'Thiết bị', options: '',
+                   sort: (fs.reduce((m,f) => Math.max(m, Number(f.sort)||0), 0)) + 10, createdAt: Date.now(), deleted: false});
+  renderSettings(true);
+  const ins = $('fldList').querySelectorAll('tr:last-child input'); if (ins[1]) { ins[1].focus(); ins[1].select(); }
+}
+function delField(id){
+  const f = data.fields.find(x => x.id === id); if (!f) return;
+  const n = data.projects.filter(p => p.info[id] !== undefined && p.info[id] !== '').length;
+  if (!confirm(`Xoá trường "${f.label}"?${n ? `\n${n} dự án đang có dữ liệu ở trường này – dữ liệu sẽ bị ẩn khỏi thống kê.` : ''}`)) return;
+  commit('field', Object.assign({}, f, {deleted: true})); renderSettings(true);
+}
+
+/* ======================= THỐNG KÊ ======================= */
+function renderStats(){
+  const ps = [...data.projects].sort(byName), ts = data.tasks, fs = sortedFields();
+  const numF = fs.filter(f => f.type === 'number'), selF = fs.filter(f => f.type === 'select');
+  const ov = ts.filter(t => dueState(t) === 'overdue').length, soon = ts.filter(t => dueState(t) === 'soon').length;
+  const done = ts.filter(t => t.status === 'done').length;
+  const rows = [];   // để xuất ra Google Sheet
+  let h = `<div class="row" style="justify-content:space-between;margin-bottom:10px"><b style="font-size:16px">📊 Thống kê tổng hợp</b>
+    <span><span id="expSt" class="small"></span> <button class="btn ro-hide" onclick="exportStats()">⤓ Xuất ra Google Sheet</button></span></div>`;
+
+  h += `<div class="cards">
+    <div class="card"><div class="v">${ps.length}</div><div class="l">Dự án</div></div>
+    <div class="card"><div class="v">${ts.length}</div><div class="l">Đầu việc (${done} xong)</div></div>
+    <div class="card"><div class="v">${avgPct(ts)}%</div><div class="l">Tiến độ chung</div></div>
+    <div class="card"><div class="v" style="color:var(--red)">${ov}</div><div class="l">Quá hạn</div></div>
+    <div class="card"><div class="v" style="color:var(--orange)">${soon}</div><div class="l">Sắp đến hạn</div></div></div>`;
+
+  // Tổng các trường kiểu Số, theo nhóm
+  const totals = {};
+  numF.forEach(f => {
+    let sum = 0, cnt = 0;
+    ps.forEach(p => { const v = Number(p.info[f.id]); if (p.info[f.id] !== undefined && p.info[f.id] !== '' && !isNaN(v)) { sum += v; cnt++; } });
+    totals[f.id] = {sum, cnt};
+  });
+  const numGroups = [];
+  numF.forEach(f => { const g = f.group || 'Khác'; let x = numGroups.find(y => y.name === g); if (!x) numGroups.push(x = {name: g, fields: []}); x.fields.push(f); });
+  numGroups.forEach(g => {
+    h += `<div class="sec">Tổng ${esc(g.name)}</div><div class="cards">${g.fields.map(f =>
+      `<div class="card"><div class="v">${fmtNum(totals[f.id].sum)}<span class="small"> ${esc(f.unit)}</span></div><div class="l">${esc(f.label)} · ${totals[f.id].cnt} dự án</div></div>`).join('')}</div>`;
+  });
+  // Đếm các trường kiểu Lựa chọn
+  selF.forEach(f => {
+    const c = {}; ps.forEach(p => { const v = p.info[f.id]; if (v) c[v] = (c[v]||0) + 1; });
+    const ks = Object.keys(c); if (!ks.length) return;
+    h += `<div class="sec">${esc(f.label)}</div><div class="cards">${ks.map(k => `<div class="card"><div class="v">${c[k]}</div><div class="l">${esc(k)}</div></div>`).join('')}</div>`;
+  });
+
+  // Bảng 1: tổng hợp dự án
+  const head1 = ['STT','Dự án','Tiến độ','Việc xong/tổng','Quá hạn','Hạn dự án', ...fs.map(f => f.label + (f.unit ? ` (${f.unit})` : ''))];
+  rows.push(['TỔNG HỢP DỰ ÁN'], head1);
+  h += `<div class="sec">Tổng hợp dự án</div><div class="tbl-wrap"><table class="tbl"><thead><tr><th>#</th><th>Dự án</th><th>Tiến độ</th><th class="num">Việc</th><th class="num">Quá hạn</th><th>Hạn</th>${fs.map(f => `<th class="${f.type==='number'?'num':''}">${esc(f.label)}${f.unit?` <span class="small">(${esc(f.unit)})</span>`:''}</th>`).join('')}</tr></thead><tbody>`;
+  ps.forEach((p, i) => {
+    const s = projStats(p.id);
+    const cell = f => { const v = p.info[f.id]; if (v === undefined || v === '') return ''; return f.type === 'number' ? fmtNum(v) : f.type === 'date' ? fmtDate(v) : esc(v); };
+    h += `<tr class="click" onclick="selProject('${p.id}')"><td>${i+1}</td><td><span class="dot" style="display:inline-block;background:${esc(p.color||COLORS[0])};margin-right:6px"></span><b>${esc(p.name)}</b></td>
+      <td><span class="bar mini" style="width:70px"><i style="width:${s.pct}%;background:${esc(p.color||COLORS[0])}"></i></span> ${s.pct}%</td>
+      <td class="num">${s.done}/${s.n}</td><td class="num" style="${s.overdue?'color:var(--red);font-weight:700':''}">${s.overdue||''}</td><td>${fmtDate(p.dueDate)}</td>
+      ${fs.map(f => `<td class="${f.type==='number'?'num':''}">${cell(f)}</td>`).join('')}</tr>`;
+    rows.push([i+1, p.name, s.pct/100, `${s.done}/${s.n}`, s.overdue, fmtDate(p.dueDate), ...fs.map(f => { const v = p.info[f.id]; return v === undefined ? '' : (f.type === 'number' ? Number(v) : f.type === 'date' ? fmtDate(v) : v); })]);
+  });
+  h += `</tbody><tfoot><tr><td></td><td>TỔNG CỘNG</td><td>${avgPct(ts)}%</td><td class="num">${done}/${ts.length}</td><td class="num">${ov||''}</td><td></td>
+    ${fs.map(f => `<td class="num">${f.type === 'number' ? fmtNum(totals[f.id].sum) : ''}</td>`).join('')}</tr></tfoot></table></div>`;
+  rows.push(['', 'TỔNG CỘNG', avgPct(ts)/100, `${done}/${ts.length}`, ov, '', ...fs.map(f => f.type === 'number' ? totals[f.id].sum : '')], []);
+
+  // Bảng 2: tiến độ theo hạng mục (gộp theo tên hạng mục)
+  const fnames = [];
+  ps.forEach(p => p.folders.forEach(f => { const n = f.name.trim(); if (!fnames.some(x => x.toLowerCase() === n.toLowerCase())) fnames.push(n); }));
+  if (fnames.length) {
+    rows.push(['TIẾN ĐỘ THEO HẠNG MỤC'], ['Dự án', ...fnames]);
+    h += `<div class="sec">Tiến độ theo hạng mục</div><div class="tbl-wrap"><table class="tbl"><tr><th>Dự án</th>${fnames.map(n => `<th class="num">${esc(n)}</th>`).join('')}</tr>`;
+    ps.forEach(p => {
+      const r = [p.name];
+      h += `<tr class="click" onclick="selProject('${p.id}')"><td><b>${esc(p.name)}</b></td>${fnames.map(n => {
+        const f = p.folders.find(x => x.name.trim().toLowerCase() === n.toLowerCase());
+        if (!f) { r.push(''); return '<td class="num small">–</td>'; }
+        const t = data.tasks.filter(x => x.projectId === p.id && x.folderId === f.id);
+        if (!t.length) { r.push(''); return '<td class="num small">·</td>'; }
+        const pc = avgPct(t); r.push(pc/100);
+        const bg = pc === 100 ? '#dcfce7' : pc >= 50 ? '#dbeafe' : pc > 0 ? '#fef9c3' : 'transparent';
+        return `<td class="num" style="background:${bg};color:#1f2937">${pc}%</td>`;
+      }).join('')}</tr>`;
+      rows.push(r);
+    });
+    h += '</table></div>';
+    rows.push([]);
+  }
+
+  // Bảng 3: khối lượng theo người nhận việc
+  const emails = new Set(ts.map(t => String(t.assignee||'').toLowerCase()).filter(Boolean));
+  if (emails.size) {
+    rows.push(['KHỐI LƯỢNG THEO NGƯỜI NHẬN VIỆC'], ['Người nhận', 'Đơn vị', 'Được giao', 'Đang làm', 'Quá hạn', 'Hoàn thành', 'Tiến độ TB']);
+    h += `<div class="sec">Khối lượng theo người nhận việc</div><div class="tbl-wrap"><table class="tbl"><tr><th>Người nhận</th><th>Đơn vị</th><th class="num">Được giao</th><th class="num">Đang làm</th><th class="num">Quá hạn</th><th class="num">Hoàn thành</th><th class="num">Tiến độ TB</th></tr>`;
+    [...emails].sort((a,b) => shortName(a).localeCompare(shortName(b),'vi')).forEach(e => {
+      const my = ts.filter(t => String(t.assignee||'').toLowerCase() === e), m = memberBy(e);
+      const r = [shortName(e), m ? m.unit||'' : '', my.length, my.filter(t => t.status==='doing').length, my.filter(t => dueState(t)==='overdue').length, my.filter(t => t.status==='done').length, avgPct(my)/100];
+      rows.push(r);
+      h += `<tr><td><b>${esc(r[0])}</b> <span class="small">${esc(m ? m.fullName||'' : e)}</span></td><td>${esc(r[1])}</td><td class="num">${r[2]}</td><td class="num">${r[3]}</td><td class="num" style="${r[4]?'color:var(--red);font-weight:700':''}">${r[4]||''}</td><td class="num">${r[5]}</td><td class="num">${avgPct(my)}%</td></tr>`;
+    });
+    h += '</table></div>';
+  }
+  rows.push([], ['Xuất lúc: ' + new Date().toLocaleString('vi-VN')]);
+  lastStatsRows = rows;
+  $('pgStats').innerHTML = ps.length ? h : '<div class="empty">Chưa có dự án nào để thống kê.</div>';
+}
+function exportStats(){
+  if (!navigator.onLine || !hasGS()) { alert('Cần có mạng để xuất.'); return; }
+  $('expSt').textContent = '⏳ Đang xuất…';
+  gsRun('exportStats', lastStatsRows)
+    .then(url => { $('expSt').innerHTML = `✅ <a href="${esc(url)}" target="_blank" rel="noopener">Mở sheet "Thống kê"</a>`; })
+    .catch(e => { $('expSt').textContent = '❌ ' + ((e && e.message) || e); });
+}
+
+/* ======================= KHỞI ĐỘNG ======================= */
+function applyMe(m){
+  me = Object.assign({email:'', canEdit:true}, m || {});
+  me.email = String(me.email || '').toLowerCase();
+  readOnly = !me.canEdit;
+  document.body.classList.toggle('ro', readOnly);
+  $('me').textContent = (me.email ? shortName(me.email) : '') + (readOnly ? ' · 👁 Chỉ xem' : '');
+  $('me').title = me.email || '';
+}
+document.addEventListener('keydown', e => { if (e.key === 'Escape') { if ($('mTask').classList.contains('show')) closeTask(); if ($('mProj').classList.contains('show')) closeProject(); closeM('mSet'); } });
+window.addEventListener('online', flush);
+window.addEventListener('offline', updateSync);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) { render(); flush(); } });
+
+data = ls.get('todo.data', data); normalize();
+queue = ls.get('todo.queue', []);
+lastSync = ls.get('todo.last', 0);
+collapsed = ls.get('todo.collapsed', {});
+applyMe(ls.get('todo.me', me));
+render();
+if (hasGS()) {
+  google.script.run
+    .withSuccessHandler(m => { applyMe(m); ls.set('todo.me', m); render(); })
+    .withFailureHandler(err => {
+      syncErr = 'Không có quyền truy cập dữ liệu: ' + ((err && err.message) || err); updateSync();
+      $('list').innerHTML = `<div class="empty">⛔ Tài khoản này chưa được chia sẻ quyền.<br>Hãy nhờ chủ sở hữu chia sẻ Google Sheet dữ liệu cho bạn.</div>`;
+    })
+    .getMe();
+}
+flush();
+setInterval(flush, AUTO_SYNC_MS);
+</script>
+</body>
+</html>

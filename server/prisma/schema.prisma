@@ -1,0 +1,127 @@
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id                 String              @id @default(cuid()) @db.VarChar(191)
+  username           String              @unique @db.VarChar(100)
+  email              String              @unique @db.VarChar(191)
+  password           String              @db.VarChar(255)
+  fullName           String?             @db.VarChar(255)
+  roleId             String              @db.VarChar(191)
+  role               Role                @relation(fields: [roleId], references: [id])
+  isActive           Boolean             @default(true)
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  projectPermissions ProjectPermission[]
+
+  @@index([roleId])
+}
+
+model Role {
+  id          String   @id @default(cuid()) @db.VarChar(191)
+  name        String   @unique @db.VarChar(100)
+  displayName String   @db.VarChar(255)
+  description String?  @db.Text
+  permissions Json
+  isSystem    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  users       User[]
+}
+
+model ProjectPermission {
+  id        String   @id @default(cuid()) @db.VarChar(191)
+  projectId String   @db.VarChar(191)
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  userId    String   @db.VarChar(191)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  access    String   @default("viewer") @db.VarChar(50) // 'owner' | 'editor' | 'viewer'
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([projectId, userId])
+  @@index([userId])
+  @@index([projectId])
+}
+
+model Project {
+  id                 String              @id @default(cuid()) @db.VarChar(191)
+  name               String              @db.VarChar(255)
+  color              String              @default("#2563eb") @db.VarChar(50)
+  note               String?             @db.Text
+  dueDate            String?             @db.VarChar(50)
+  info               Json?
+  folders            Json?
+  files              Json?
+  deleted            Boolean             @default(false)
+  updatedBy          String?             @db.VarChar(191)
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  tasks              Task[]
+  projectPermissions ProjectPermission[]
+
+  @@index([deleted])
+}
+
+model Task {
+  id        String   @id @default(cuid()) @db.VarChar(191)
+  projectId String?  @db.VarChar(191)
+  project   Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  folderId  String?  @db.VarChar(191)
+  title     String   @db.VarChar(500)
+  note      String?  @db.Text
+  status    String   @default("todo") @db.VarChar(50)
+  priority  String   @default("med")  @db.VarChar(50)
+  progress  Int      @default(0)
+  sort      Int      @default(10)
+  startDate String?  @db.VarChar(50)
+  dueDate   String?  @db.VarChar(50)
+  assignee  String?  @db.VarChar(191)
+  assigner  String?  @db.VarChar(191)
+  files     Json?
+  deleted   Boolean  @default(false)
+  updatedBy String?  @db.VarChar(191)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([projectId, deleted])
+  @@index([status, deleted])
+  @@index([assignee, deleted])
+}
+
+model Member {
+  id        String   @id @default(cuid()) @db.VarChar(191)
+  name      String   @db.VarChar(255)
+  fullName  String?  @db.VarChar(255)
+  email     String   @unique @db.VarChar(191)
+  unit      String?  @db.VarChar(255)
+  phone     String?  @db.VarChar(100)
+  deleted   Boolean  @default(false)
+  updatedBy String?  @db.VarChar(191)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([deleted])
+}
+
+model Field {
+  id        String   @id @default(cuid()) @db.VarChar(191)
+  label     String   @db.VarChar(255)
+  type      String   @default("text") @db.VarChar(50)
+  unit      String?  @db.VarChar(50)
+  group     String   @default("Thông tin chung") @db.VarChar(255)
+  options   String?  @db.Text
+  sort      Int      @default(10)
+  deleted   Boolean  @default(false)
+  updatedBy String?  @db.VarChar(191)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([deleted])
+}
