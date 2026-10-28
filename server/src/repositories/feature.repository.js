@@ -48,28 +48,30 @@ export const featureRepository = {
     },
 
     async upsertPresence(record) {
+        const normalized = { ...record, projectId: record.projectId || 'all' };
         if (isPrismaConnected && prisma?.presenceSession) {
             return prisma.presenceSession.upsert({
-                where: { userId_projectId: { userId: record.userId, projectId: record.projectId || null } },
-                create: record,
-                update: { lastSeen: record.lastSeen }
+                where: { userId_projectId: { userId: normalized.userId, projectId: normalized.projectId } },
+                create: normalized,
+                update: { lastSeen: normalized.lastSeen }
             });
         }
         const { data, list } = fallbackList('presenceSessions');
-        const index = list.findIndex(item => item.userId === record.userId && (item.projectId || null) === (record.projectId || null));
-        if (index >= 0) list[index] = { ...list[index], ...record };
-        else list.push({ ...record, createdAt: new Date().toISOString() });
+        const index = list.findIndex(item => item.userId === normalized.userId && (item.projectId || 'all') === normalized.projectId);
+        if (index >= 0) list[index] = { ...list[index], ...normalized };
+        else list.push({ ...normalized, createdAt: new Date().toISOString() });
         writeFallbackData(data);
         return list[index >= 0 ? index : list.length - 1];
     },
 
     async listPresence(projectId = null, maxAgeMs = 120000) {
         const since = new Date(Date.now() - maxAgeMs);
+        const normalizedProjectId = projectId || null;
         if (isPrismaConnected && prisma?.presenceSession) {
-            return prisma.presenceSession.findMany({ where: { lastSeen: { gte: since }, ...(projectId ? { projectId } : {}) } });
+            return prisma.presenceSession.findMany({ where: { lastSeen: { gte: since }, ...(normalizedProjectId ? { projectId: normalizedProjectId } : {}) } });
         }
         const { list } = fallbackList('presenceSessions');
-        return list.filter(item => new Date(item.lastSeen) >= since && (!projectId || item.projectId === projectId));
+        return list.filter(item => new Date(item.lastSeen) >= since && (!normalizedProjectId || (item.projectId || 'all') === normalizedProjectId));
     },
 
     async createBackupMetadata(record) {
