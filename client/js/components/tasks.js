@@ -53,8 +53,8 @@ export function renderTasksMain() {
   const fa = state.assigneeFilter;
 
   const visibleFilter = t => matchFilter(t, state.curFilter)
-    && (!q || (t.title + ' ' + (t.note || '') + ' ' + state.shortName(t.assignee)).toLowerCase().includes(q))
-    && (!fa || (fa === '__none' ? !t.assignee : String(t.assignee || '').toLowerCase() === fa));
+    && (!q || (t.title + ' ' + (t.note || '') + ' ' + state.formatAssignees(t.assignee)).toLowerCase().includes(q))
+    && (!fa || (fa === '__none' ? !t.assignee : state.getAssignees(t).some(a => a.toLowerCase() === fa)));
 
   const dragOn = state.curProject !== 'all' && state.curFilter === 'all' && !q && !fa && sort === 'manual' && typeof Sortable !== 'undefined';
 
@@ -121,33 +121,47 @@ function taskItemHtml(t, showProjectName, canDrag) {
   const done = t.status === 'done';
   const pc = p ? state.esc(p.color || CONFIG.DEFAULT_COLOR) : '';
   const nFiles = (t.files || []).length;
-  const canEdit = state.canModifyTask(t);
-  const isOther = Boolean(t.assignee && !canEdit);
 
+  const canComplete = state.canCompleteTask(t);
+  const canEdit = state.canEditTask(t);
+  const isViewOnly = !canComplete && !canEdit;
+
+  // Hiển thị danh sách người được giao (1 hoặc nhiều người)
+  const assignees = state.getAssignees(t);
   let who = '';
-  if (t.assignee) {
-    const from = t.assigner && String(t.assigner).toLowerCase() !== String(t.assignee).toLowerCase()
+  if (assignees.length) {
+    const from = t.assigner && !assignees.some(a => a.toLowerCase() === String(t.assigner).toLowerCase())
       ? state.esc(state.shortName(t.assigner)) + ' → '
       : '';
-    who = `<span class="task-who" title="Giao: ${state.esc(state.fullName(t.assigner))}&#10;Nhận: ${state.esc(state.fullName(t.assignee))}">${from}<b>${state.esc(state.shortName(t.assignee))}</b></span>`;
+    const assigneesText = assignees.map(a => state.shortName(a)).join(', ');
+    const icon = assignees.length > 1 ? '👥 ' : '';
+    const tooltip = `Người giao: ${state.fullName(t.assigner) || t.assigner || '–'}\nNgười nhận (${assignees.length}):\n${assignees.map(a => '• ' + (state.fullName(a) || a)).join('\n')}`;
+    who = `<span class="task-who" title="${state.esc(tooltip)}">${from}${icon}<b>${state.esc(assigneesText)}</b></span>`;
+  }
+
+  // Hiển thị tiến độ checklist nếu có
+  let clHtml = '';
+  if (t.checklist && t.checklist.length) {
+    const doneCl = t.checklist.filter(c => c.done).length;
+    clHtml = `<span class="badge b-gray" style="font-size:11px" title="Checklist: ${doneCl}/${t.checklist.length} bước đã hoàn thành">☑ ${doneCl}/${t.checklist.length}</span>`;
   }
 
   const pgHtml = done
     ? '<span class="done-badge">✓ Xong</span>'
     : `<span class="task-progress"><span class="bar mini"><i style="width:${pg}%"></i></span>${pg}%</span>`;
 
-  // Checkbox: nếu là task của người khác thì không cho tick, hiển thị cảnh báo khi bấm
-  const checkHtml = isOther
-    ? `<input type="checkbox" class="task-check task-check-readonly" ${done ? 'checked' : ''} title="Công việc của ${state.esc(state.shortName(t.assignee))} · Chỉ người nhận việc mới có quyền cập nhật tiến độ" onclick="event.stopPropagation(); window.app.notifyNotTaskOwner('${t.id}')">`
-    : `<input type="checkbox" class="task-check" ${done ? 'checked' : ''} onclick="event.stopPropagation(); window.app.toggleDone('${t.id}')">`;
+  // Checkbox hoàn thành: người được giao HOẶC Admin đều có thể hoàn thành!
+  const checkHtml = canComplete
+    ? `<input type="checkbox" class="task-check" ${done ? 'checked' : ''} onclick="event.stopPropagation(); window.app.toggleDone('${t.id}')">`
+    : `<input type="checkbox" class="task-check task-check-readonly" ${done ? 'checked' : ''} title="Chỉ người được giao việc hoặc Quản trị viên (Admin) mới có quyền hoàn thành công việc này" onclick="event.stopPropagation(); window.app.notifyNotTaskOwner('${t.id}')">`;
 
-  // Huy hiệu chỉ xem nếu là task của người khác
-  const lockBadge = isOther
-    ? `<span class="badge b-gray task-readonly-badge" title="Công việc của ${state.esc(state.shortName(t.assignee))} (Chỉ xem)">🔒 Chỉ xem</span>`
+  // Huy hiệu chỉ xem nếu người dùng không có quyền sửa lẫn hoàn thành
+  const lockBadge = isViewOnly
+    ? `<span class="badge b-gray task-readonly-badge" title="Chế độ chỉ xem">👁️ Chỉ xem</span>`
     : '';
 
   return `
-    <div class="task ${state.dueState(t)} ${done ? 'done' : ''} ${isOther ? 'task-readonly-item' : ''}" data-id="${t.id}" onclick="window.app.openTaskModal('${t.id}')">
+    <div class="task ${state.dueState(t)} ${done ? 'done' : ''} ${isViewOnly ? 'task-readonly-item' : ''}" data-id="${t.id}" onclick="window.app.openTaskModal('${t.id}')">
       ${canDrag && canEdit ? '<span class="handle" onclick="event.stopPropagation()" title="Kéo để sắp xếp">⋮⋮</span>' : ''}
       <span class="task-code">${state.CODE[t.id] || ''}</span>
       ${checkHtml}
@@ -158,6 +172,7 @@ function taskItemHtml(t, showProjectName, canDrag) {
       <span class="task-meta">
         ${p ? `<span class="badge" style="background:${pc}22;color:${pc};border-color:${pc}44">${state.esc(p.name)}</span>` : ''}
         ${who}
+        ${clHtml}
         ${lockBadge}
         <span class="due">${state.dueLabel(t)}</span>
         ${nFiles ? `<span class="small" title="${nFiles} tệp đính kèm">📎${nFiles}</span>` : ''}
@@ -180,7 +195,7 @@ function emptyTasksHtml() {
 
 function matchFilter(t, filterKey) {
   if (filterKey === 'all') return true;
-  if (filterKey === 'mine') return String(t.assignee || '').toLowerCase() === apiUserEmail();
+  if (filterKey === 'mine') return state.isTaskAssignee(t);
   if (filterKey === 'done') return t.status === 'done';
   if (filterKey === 'doing') return t.status === 'doing';
   return state.dueState(t) === filterKey;
@@ -210,7 +225,8 @@ function renderAssigneeFilter(scope) {
   const sel = document.getElementById('assigneeFilter');
   if (!sel) return;
   const currentVal = sel.value;
-  const emails = new Set(scope.map(t => String(t.assignee || '').toLowerCase()).filter(Boolean));
+  const emails = new Set();
+  scope.forEach(t => state.getAssignees(t).forEach(e => emails.add(e.toLowerCase())));
   (state.data.users || []).forEach(u => u.email && emails.add(String(u.email).toLowerCase()));
 
   const options = [

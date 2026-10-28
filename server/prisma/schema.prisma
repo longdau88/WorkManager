@@ -84,9 +84,10 @@ model Task {
   sort      Int      @default(10)
   startDate String?  @db.VarChar(50)
   dueDate   String?  @db.VarChar(50)
-  assignee  String?  @db.VarChar(191)
+  assignee  String?  @db.VarChar(500)
   assigner  String?  @db.VarChar(191)
   files     Json?
+  checklist Json?
   deleted   Boolean  @default(false)
   updatedBy String?  @db.VarChar(191)
   createdAt DateTime @default(now())
@@ -94,7 +95,6 @@ model Task {
 
   @@index([projectId, deleted])
   @@index([status, deleted])
-  @@index([assignee, deleted])
 }
 
 model Member {

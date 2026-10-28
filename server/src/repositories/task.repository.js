@@ -46,6 +46,7 @@ export const taskRepository = {
       assignee: record.assignee || null,
       assigner: record.assigner || null,
       files: record.files || [],
+      checklist: Array.isArray(record.checklist) ? record.checklist : (record.checklist ? [record.checklist] : []),
       deleted: Boolean(record.deleted),
       updatedBy: record.updatedBy || null,
       updatedAt: now

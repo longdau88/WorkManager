@@ -1,16 +1,28 @@
 import { taskRepository } from '../repositories/task.repository.js';
 import { projectRepository } from '../repositories/project.repository.js';
 
-function isUserTaskAssignee(task, user) {
-  if (!task || !task.assignee) return true; // Công việc chưa giao cho ai -> cho phép giao việc
-  if (!user) return false;
+function getTaskAssignees(task) {
+  if (!task || !task.assignee) return [];
+  if (Array.isArray(task.assignee)) return task.assignee.map(s => String(s).trim().toLowerCase()).filter(Boolean);
+  return String(task.assignee).split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
+}
 
-  const targetAssignee = String(task.assignee).trim().toLowerCase();
+function isUserAdmin(user) {
+  if (!user) return false;
+  return Boolean(user.isAdmin || user.roleName === 'admin' || (user.permissions || []).includes('edit_all_projects'));
+}
+
+function isUserTaskAssignee(task, user) {
+  if (!task || !task.assignee) return true; // Công việc chưa giao cho ai
+  if (!user) return false;
+  const assignees = getTaskAssignees(task);
+  if (!assignees.length) return true;
+
   const userEmail = (typeof user === 'string' ? user : user.email || '').trim().toLowerCase();
   const userUsername = (typeof user === 'object' && user.username ? String(user.username) : '').trim().toLowerCase();
   const userId = (typeof user === 'object' && user.id ? String(user.id) : '').trim().toLowerCase();
 
-  return targetAssignee === userEmail || targetAssignee === userUsername || targetAssignee === userId;
+  return assignees.some(a => a === userEmail || a === userUsername || a === userId);
 }
 
 export const taskService = {
@@ -41,13 +53,22 @@ export const taskService = {
       throw err;
     }
 
-    // Kiểm tra quyền: không thể can thiệp vào task của người khác
+    // Kiểm tra quyền chỉnh sửa / hoàn thành task
     if (data.id) {
       const existing = await taskRepository.findById(data.id);
-      if (existing && existing.assignee && !isUserTaskAssignee(existing, user)) {
-        const err = new Error(`Bạn không thể can thiệp hoặc chỉnh sửa công việc của người khác (được giao cho ${existing.assignee}).`);
-        err.statusCode = 403;
-        throw err;
+      if (existing && existing.assignee) {
+        const isAdmin = isUserAdmin(user);
+        const isAssignee = isUserTaskAssignee(existing, user);
+        const userEmail = (typeof user === 'string' ? user : user.email || '').trim().toLowerCase();
+        const isAssigner = existing.assigner && String(existing.assigner).trim().toLowerCase() === userEmail;
+
+        // Cả người được giao (Assignees) và Admin đều có quyền cập nhật tiến độ / hoàn thành task!
+        // Người giao việc (Assigner) cũng có quyền chỉnh sửa.
+        if (!isAdmin && !isAssignee && !isAssigner) {
+          const err = new Error(`Bạn không có quyền chỉnh sửa công việc này (chỉ người được giao việc hoặc Quản trị viên mới có quyền cập nhật).`);
+          err.statusCode = 403;
+          throw err;
+        }
       }
     }
 
@@ -68,6 +89,7 @@ export const taskService = {
       title: data.title.trim(),
       status,
       progress,
+      checklist: Array.isArray(data.checklist) ? data.checklist : [],
       updatedBy: userEmail
     };
 
@@ -81,9 +103,13 @@ export const taskService = {
     for (const r of records) {
       if (r.id) {
         const existing = await taskRepository.findById(r.id);
-        if (existing && existing.assignee && !isUserTaskAssignee(existing, user)) {
-          // Bỏ qua không cập nhật task của người khác
-          continue;
+        if (existing && existing.assignee) {
+          const isAdmin = isUserAdmin(user);
+          const isAssignee = isUserTaskAssignee(existing, user);
+          const isAssigner = existing.assigner && String(existing.assigner).trim().toLowerCase() === String(userEmail).toLowerCase();
+          if (!isAdmin && !isAssignee && !isAssigner) {
+            continue;
+          }
         }
       }
       prepared.push({
@@ -103,9 +129,13 @@ export const taskService = {
       throw err;
     }
 
-    // Kiểm tra quyền: không thể can thiệp hoặc xóa task của người khác
-    if (existing.assignee && !isUserTaskAssignee(existing, user)) {
-      const err = new Error('Bạn không thể can thiệp hoặc xóa công việc của người khác.');
+    // Quyền xóa task: Admin hoặc Assigner (người giao)
+    const isAdmin = isUserAdmin(user);
+    const userEmail = (typeof user === 'string' ? user : user.email || '').trim().toLowerCase();
+    const isAssigner = existing.assigner && String(existing.assigner).trim().toLowerCase() === userEmail;
+
+    if (!isAdmin && !isAssigner) {
+      const err = new Error('Bạn không có quyền xóa công việc này (chỉ Quản trị viên hoặc người giao việc mới có quyền xóa).');
       err.statusCode = 403;
       throw err;
     }

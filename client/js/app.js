@@ -152,7 +152,7 @@ class App {
   toggleDone(id) {
     const t = state.taskById(id);
     if (!t) return;
-    if (!state.canModifyTask(t)) {
+    if (!state.canCompleteTask(t)) {
       this.notifyNotTaskOwner(id);
       return;
     }
@@ -162,13 +162,16 @@ class App {
       status: isDone ? 'doing' : 'done',
       progress: isDone ? 90 : 100
     };
+    if (updated.checklist && updated.checklist.length > 0) {
+      updated.checklist = updated.checklist.map(c => ({ ...c, done: !isDone }));
+    }
     state.commit('task', updated);
   }
 
   notifyNotTaskOwner(id) {
     const t = state.taskById(id);
-    const who = t && t.assignee ? state.shortName(t.assignee) : 'thành viên khác';
-    alert(`🔒 Bạn không thể can thiệp vào công việc của người khác.\n\nCông việc này được giao cho "${who}". Chỉ người nhận việc mới có quyền cập nhật tiến độ và trạng thái.`);
+    const who = t && t.assignee ? state.formatAssignees(t.assignee) : 'thành viên khác';
+    alert(`🔒 Bạn không có quyền hoàn thành công việc này.\n\nCông việc này được giao cho: "${who}". Chỉ người nhận việc hoặc Quản trị viên (Admin) mới có quyền hoàn thành và cập nhật tiến độ.`);
   }
 
   setAssigneeFilter(email) {
@@ -233,6 +236,13 @@ class App {
   onTaskStatusChange() { modals.onStatusChange(); }
   handleTaskFileUpload(input) { modals.handleTaskFileUpload(input); }
   removeTaskFile(i) { modals.removeTaskFile(i); }
+  addAssigneeFromPicker(val) { modals.addAssigneeFromPicker(val); }
+  removeAssignee(i) { modals.removeAssignee(i); }
+  promptAddChecklistItem() { modals.promptAddChecklistItem(); }
+  addChecklistItemFromInput() { modals.addChecklistItemFromInput(); }
+  toggleChecklistItem(i) { modals.toggleChecklistItem(i); }
+  removeChecklistItem(i) { modals.removeChecklistItem(i); }
+  setTaskProgressQuick(val) { modals.setTaskProgressQuick(val); }
 
   openProjectModal(id) { modals.openProject(id); }
   closeProjectModal() { closeModalEl('modalProject'); }

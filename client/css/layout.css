@@ -459,6 +459,280 @@ main {
   margin-top: 3px;
 }
 
+/* Multi-Assignee Selection UI */
+.assignee-select-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.assignee-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-height: 34px;
+  align-items: center;
+  padding: 4px 6px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+}
+
+.assignee-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 8px;
+  background: var(--bg-hover);
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-full);
+  font-size: var(--font-xs);
+  font-weight: 500;
+  color: var(--text-primary);
+  user-select: none;
+  animation: fadeIn 0.15s ease-out;
+}
+
+.chip-avatar {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--pri-500);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-transform: uppercase;
+}
+
+.chip-name {
+  line-height: 1.2;
+}
+
+.chip-remove {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 12px;
+  line-height: 1;
+  padding: 0 2px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.15s;
+}
+
+.chip-remove:hover {
+  color: var(--danger-text, #ef4444);
+}
+
+.assignee-picker-row {
+  display: flex;
+  gap: 8px;
+}
+
+/* Detailed Progress Card & Checklist UI */
+.detailed-progress-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-lg);
+  padding: 14px 16px;
+  margin-top: var(--space-2);
+  margin-bottom: var(--space-2);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+[data-theme="dark"] .detailed-progress-card {
+  background: rgba(255, 255, 255, 0.03);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.detailed-progress-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+
+.prog-badge-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.prog-large-val {
+  font-size: 24px;
+  font-weight: 800;
+  color: var(--pri-600);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+[data-theme="dark"] .prog-large-val {
+  color: var(--pri-400);
+}
+
+.prog-status-tag {
+  padding: 3px 10px;
+  border-radius: var(--radius-full);
+  font-size: var(--font-xs);
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.prog-status-tag.tag-todo {
+  background: var(--bg-hover);
+  color: var(--text-muted);
+  border: 1px solid var(--border-light);
+}
+
+.prog-status-tag.tag-doing {
+  background: rgba(37, 99, 235, 0.12);
+  color: var(--pri-500);
+  border: 1px solid rgba(37, 99, 235, 0.25);
+}
+
+.prog-status-tag.tag-done {
+  background: var(--success-bg);
+  color: var(--success-text);
+  border: 1px solid var(--success-border);
+}
+
+.prog-summary-text {
+  font-size: var(--font-xs);
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.prog-quick-btns {
+  display: flex;
+  gap: 4px;
+}
+
+.small-btn {
+  padding: 3px 8px !important;
+  font-size: 11px !important;
+  height: 26px !important;
+  min-height: 26px !important;
+  border-radius: var(--radius-md) !important;
+}
+
+.prog-bar-lg {
+  width: 100%;
+  height: 8px;
+  background: var(--border-light);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+  position: relative;
+}
+
+.prog-bar-lg-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--pri-500), #10b981);
+  border-radius: var(--radius-full);
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.checklist-box {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px dashed var(--border-light);
+}
+
+.checklist-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.checklist-title {
+  font-size: var(--font-sm);
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.checklist-items-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 220px;
+  overflow-y: auto;
+  padding-right: 2px;
+}
+
+.checklist-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 10px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.checklist-item:hover {
+  border-color: var(--border-medium);
+}
+
+.checklist-item.done {
+  background: var(--bg-hover);
+  border-color: var(--border-light);
+  opacity: 0.85;
+}
+
+.checklist-item-check {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--pri-500);
+  cursor: pointer;
+  margin: 0;
+}
+
+.checklist-item-title {
+  flex: 1;
+  font-size: var(--font-xs);
+  color: var(--text-primary);
+  cursor: pointer;
+  user-select: none;
+  line-height: 1.4;
+  word-break: break-word;
+}
+
+.checklist-item-title.strikethrough {
+  text-decoration: line-through;
+  color: var(--text-muted);
+}
+
+.checklist-del-btn {
+  font-size: 11px;
+  color: var(--text-muted);
+  padding: 2px 6px;
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  transition: color 0.15s, background 0.15s;
+}
+
+.checklist-del-btn:hover {
+  color: var(--danger-text, #ef4444);
+  background: rgba(239, 68, 68, 0.1);
+}
+
+.checklist-empty {
+  font-size: var(--font-xs);
+  color: var(--text-muted);
+  padding: 8px 4px;
+  font-style: italic;
+}
+
 .task-title {
   flex: 1;
   min-width: 0;

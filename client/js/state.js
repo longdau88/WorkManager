@@ -54,6 +54,7 @@ export class StateManager {
     });
     this.data.tasks.forEach(t => {
       if (!Array.isArray(t.files)) t.files = [];
+      if (!Array.isArray(t.checklist)) t.checklist = [];
     });
   }
 
@@ -228,18 +229,85 @@ export class StateManager {
     });
   }
 
-  canModifyTask(t) {
-    if (!t) return true; // Công việc mới đang được tạo
-    if (!t.assignee) return true; // Chưa giao cho ai -> Cho phép phân công / chỉnh sửa
-    const u = api.currentUser;
-    if (!u) return false;
+  getAssignees(t) {
+    if (!t) return [];
+    const val = typeof t === 'string' ? t : t.assignee;
+    if (!val) return [];
+    if (Array.isArray(val)) return val.map(s => String(s).trim()).filter(Boolean);
+    return String(val).split(',').map(s => s.trim()).filter(Boolean);
+  }
 
-    const lowerAssignee = String(t.assignee).trim().toLowerCase();
+  formatAssignees(assigneeStr) {
+    const list = this.getAssignees(assigneeStr);
+    if (!list.length) return '';
+    if (list.length === 1) return this.shortName(list[0]);
+    return list.map(e => this.shortName(e)).join(', ');
+  }
+
+  isTaskAssignee(t, u = api.currentUser) {
+    if (!t || !u) return false;
+    const assignees = this.getAssignees(t).map(s => s.toLowerCase());
+    if (!assignees.length) return false;
+
     const myEmail = String(u.email || '').trim().toLowerCase();
     const myUsername = String(u.username || '').trim().toLowerCase();
     const myId = String(u.id || '').trim().toLowerCase();
 
-    return lowerAssignee === myEmail || lowerAssignee === myUsername || lowerAssignee === myId;
+    return assignees.some(a => a === myEmail || a === myUsername || a === myId);
+  }
+
+  // Quyền hoàn thành task: Người được giao việc HOẶC Admin
+  canCompleteTask(t, u = api.currentUser) {
+    if (!t) return true;
+    if (!u) return false;
+    if (u.isAdmin || u.roleName === 'admin' || (u.permissions || []).includes('edit_all_projects')) {
+      return true;
+    }
+    return this.isTaskAssignee(t, u);
+  }
+
+  // Quyền sửa nội dung task (tiêu đề, hạn, mức ưu tiên, hạng mục, thêm bớt người nhận)
+  canEditTask(t, u = api.currentUser) {
+    if (!t) return true; // Công việc mới
+    if (!u) return false;
+    if (u.isAdmin || u.roleName === 'admin' || (u.permissions || []).includes('edit_all_projects')) {
+      return true;
+    }
+    const myEmail = String(u.email || '').trim().toLowerCase();
+    if (t.assigner && String(t.assigner).trim().toLowerCase() === myEmail) {
+      return true;
+    }
+    const perm = (u.projectPermissions || []).find(p => p.projectId === t.projectId);
+    if (perm && (perm.access === 'owner' || perm.access === 'editor')) {
+      return true;
+    }
+    if (!t.assignee) return true;
+    return false;
+  }
+
+  // Quyền xóa task: Admin, Assigner hoặc Project Owner
+  canDeleteTask(t, u = api.currentUser) {
+    if (!t) return false;
+    if (!u) return false;
+    if (u.isAdmin || u.roleName === 'admin' || (u.permissions || []).includes('edit_all_projects')) {
+      return true;
+    }
+    const myEmail = String(u.email || '').trim().toLowerCase();
+    if (t.assigner && String(t.assigner).trim().toLowerCase() === myEmail) {
+      return true;
+    }
+    const perm = (u.projectPermissions || []).find(p => p.projectId === t.projectId);
+    return Boolean(perm && perm.access === 'owner');
+  }
+
+  // Quyền cập nhật tiến độ (thanh kéo %, tick checklist, trạng thái): Người được giao việc HOẶC Admin HOẶC Assigner
+  canUpdateProgress(t, u = api.currentUser) {
+    return this.canCompleteTask(t, u) || this.canEditTask(t, u);
+  }
+
+  // Quyền can thiệp bất kỳ vào task
+  canModifyTask(t) {
+    return this.canEditTask(t) || this.canUpdateProgress(t);
   }
 
   // Optimistic UI & Sync Queue

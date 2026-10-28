@@ -9,6 +9,11 @@ let selColor = CONFIG.DEFAULT_COLOR;
 let draftFolders = [];
 let taskFileCtx = { files: [], added: [], removed: [] };
 let projFileCtx = { files: [], added: [], removed: [] };
+let draftAssignees = [];
+let draftChecklist = [];
+let canUserEditTask = true;
+let canUserCompleteTask = true;
+let canUserDeleteTask = true;
 let isCurrentTaskReadOnly = false;
 
 export const modals = {
@@ -16,7 +21,22 @@ export const modals = {
   openTask(id, folderId) {
     editTaskId = id || null;
     const t = id ? state.taskById(id) : null;
-    isCurrentTaskReadOnly = Boolean(t && t.assignee && !state.canModifyTask(t));
+
+    if (!t) {
+      canUserEditTask = true;
+      canUserCompleteTask = true;
+      canUserDeleteTask = false;
+      isCurrentTaskReadOnly = false;
+      draftAssignees = [];
+      draftChecklist = [];
+    } else {
+      canUserEditTask = state.canEditTask(t);
+      canUserCompleteTask = state.canCompleteTask(t);
+      canUserDeleteTask = state.canDeleteTask(t);
+      isCurrentTaskReadOnly = !canUserEditTask && !canUserCompleteTask;
+      draftAssignees = state.getAssignees(t);
+      draftChecklist = Array.isArray(t.checklist) ? JSON.parse(JSON.stringify(t.checklist)) : [];
+    }
 
     // Fill Projects dropdown
     const projSel = document.getElementById('t_project');
@@ -29,100 +49,25 @@ export const modals = {
 
     this.fillFolders(t ? t.folderId : (folderId && folderId !== '__none' ? folderId : ''));
 
-    // Fill Assigners and Assignees from Users
+    // Fill Assigner
     const userList = (state.data.users || []).filter(u => u.isActive !== false);
-    const proj = state.projById(targetProjId);
-
-    // Identify project implementing members (from projectPermissions)
-    const projMemberUserIds = new Set();
-    if (proj && Array.isArray(proj.projectPermissions)) {
-      proj.projectPermissions.forEach(pp => {
-        if (pp.access && pp.access !== 'none') projMemberUserIds.add(pp.userId);
-      });
-    }
+    const userEmail = api.userEmail;
+    const meOpt = userEmail && !state.memberBy(userEmail) ? `<option value="${state.esc(userEmail)}">Tôi (${state.esc(userEmail)})</option>` : '';
 
     const renderUserOption = u => {
       const displayName = u.fullName ? `${u.fullName} (${u.username})` : u.username;
       const unitStr = u.unit ? ` – ${u.unit}` : '';
       return `<option value="${state.esc(String(u.email).toLowerCase())}">${state.esc(displayName + unitStr)}</option>`;
     };
-
-    let userOpts = '';
-    if (proj && projMemberUserIds.size > 0) {
-      const inProj = userList.filter(u => projMemberUserIds.has(u.id));
-      const notInProj = userList.filter(u => !projMemberUserIds.has(u.id));
-      userOpts = `
-        <optgroup label="Thành viên triển khai dự án này (${inProj.length})">
-          ${inProj.map(renderUserOption).join('')}
-        </optgroup>
-        <optgroup label="Tất cả tài khoản (${notInProj.length})">
-          ${notInProj.map(renderUserOption).join('')}
-        </optgroup>
-      `;
-    } else {
-      userOpts = userList.map(renderUserOption).join('');
-    }
-
-    const userEmail = api.userEmail;
-    const meOpt = userEmail && !state.memberBy(userEmail) ? `<option value="${state.esc(userEmail)}">Tôi (${state.esc(userEmail)})</option>` : '';
+    const userOpts = userList.map(renderUserOption).join('');
 
     const assignerSel = document.getElementById('t_assigner');
-    const assigneeSel = document.getElementById('t_assignee');
-
     assignerSel.innerHTML = '<option value="">— Người giao —</option>' + meOpt + userOpts;
-    assigneeSel.innerHTML = '<option value="">— Chưa giao —</option>' + userOpts;
-
     ensureSelectOption(assignerSel, t && t.assigner);
-    ensureSelectOption(assigneeSel, t && t.assignee);
-
     assignerSel.value = t ? (t.assigner || '') : (userEmail || '');
-    assigneeSel.value = t ? (t.assignee || '') : '';
 
-    // Notice banner for Read-Only mode
-    const noticeEl = document.getElementById('taskReadOnlyNotice');
-    if (noticeEl) {
-      if (isCurrentTaskReadOnly) {
-        const whoName = state.fullName(t.assignee) || t.assignee;
-        noticeEl.innerHTML = `
-          <div class="readonly-icon">🔒</div>
-          <div class="readonly-text">
-            <b>Chế độ chỉ xem</b>: Công việc này được giao cho <b>${state.esc(whoName)}</b>.
-            <div class="readonly-sub">Bạn có thể theo dõi chi tiết và tiến độ nhưng <u>không thể can thiệp hoặc chỉnh sửa</u> công việc của người khác.</div>
-          </div>
-        `;
-        noticeEl.style.display = 'flex';
-      } else {
-        noticeEl.style.display = 'none';
-        noticeEl.innerHTML = '';
-      }
-    }
-
-    // Toggle disabled state on inputs
-    const taskInputIds = [
-      't_title', 't_project', 't_folder', 't_assigner', 't_assignee',
-      't_status', 't_priority', 't_start', 't_due', 't_progress', 't_note'
-    ];
-    taskInputIds.forEach(fid => {
-      const el = document.getElementById(fid);
-      if (el) el.disabled = isCurrentTaskReadOnly;
-    });
-
-    const uploadWrap = document.getElementById('t_upload_wrap');
-    if (uploadWrap) uploadWrap.style.display = isCurrentTaskReadOnly ? 'none' : 'flex';
-
-    const btnSaveTaskEl = document.getElementById('btnSaveTask');
-    if (btnSaveTaskEl) btnSaveTaskEl.style.display = isCurrentTaskReadOnly ? 'none' : '';
-
-    const btnDeleteTaskEl = document.getElementById('btnDeleteTask');
-    if (btnDeleteTaskEl) btnDeleteTaskEl.style.display = (t && !isCurrentTaskReadOnly) ? '' : 'none';
-
-    // Title
-    const titleEl = document.getElementById('taskModalTitle');
-    if (t) {
-      titleEl.innerHTML = `Đầu việc ${state.CODE[t.id] || ''} ${isCurrentTaskReadOnly ? '<span class="badge b-gray" style="font-size:11px;margin-left:6px;vertical-align:middle">🔒 Chỉ xem</span>' : ''}`;
-    } else {
-      titleEl.textContent = 'Đầu việc mới';
-    }
+    // Render Assignees chips and picker
+    this.renderAssignees();
 
     // Populate Fields
     document.getElementById('t_title').value = t ? t.title : '';
@@ -133,15 +78,362 @@ export const modals = {
 
     const progVal = t ? state.prog(t) : 0;
     document.getElementById('t_progress').value = progVal;
-    document.getElementById('t_progress_val').textContent = progVal;
     document.getElementById('t_note').value = t ? (t.note || '') : '';
 
     // Files
     taskFileCtx = { files: t ? [...(t.files || [])] : [], added: [], removed: [] };
     this.renderTaskFiles();
 
+    // Render detailed progress card & checklist
+    this.renderChecklist();
+    this.syncProgressDisplay();
+
+    // Notice banner
+    const noticeEl = document.getElementById('taskReadOnlyNotice');
+    if (noticeEl) {
+      if (isCurrentTaskReadOnly) {
+        const assigneesStr = state.formatAssignees(t.assignee) || 'chưa giao';
+        noticeEl.innerHTML = `
+          <div class="readonly-icon">👁️</div>
+          <div class="readonly-text">
+            <b>Chế độ xem chi tiết tiến độ (Chỉ xem)</b>
+            <div class="readonly-sub">Công việc này được giao cho: <b>${state.esc(assigneesStr)}</b>. Bạn có thể theo dõi tiến độ chi tiết và danh sách checklist, nhưng <u>không thể chỉnh sửa</u> hoặc can thiệp vào công việc của người khác.</div>
+          </div>
+        `;
+        noticeEl.style.display = 'flex';
+      } else if (t && canUserCompleteTask && !canUserEditTask) {
+        noticeEl.innerHTML = `
+          <div class="readonly-icon" style="color:var(--pri-500)">📋</div>
+          <div class="readonly-text">
+            <b>Bạn là thành viên được giao thực hiện công việc này</b>
+            <div class="readonly-sub">Bạn có quyền đánh dấu hoàn thành các bước checklist, điều chỉnh tỷ lệ hoàn thành (%) và đánh dấu hoàn tất công việc.</div>
+          </div>
+        `;
+        noticeEl.style.display = 'flex';
+      } else {
+        noticeEl.style.display = 'none';
+        noticeEl.innerHTML = '';
+      }
+    }
+
+    // Toggle disabled state on inputs based on granular permissions
+    // 1. Structure / Info inputs: only editable if canUserEditTask
+    const structureInputIds = ['t_title', 't_project', 't_folder', 't_assigner', 't_priority', 't_start', 't_due'];
+    structureInputIds.forEach(fid => {
+      const el = document.getElementById(fid);
+      if (el) el.disabled = !canUserEditTask;
+    });
+
+    const assigneePickerRow = document.querySelector('.assignee-picker-row');
+    if (assigneePickerRow) assigneePickerRow.style.display = canUserEditTask ? 'flex' : 'none';
+
+    // 2. Progress / Completion inputs: editable if canUserCompleteTask or canUserEditTask
+    const canTouchProgress = canUserCompleteTask || canUserEditTask;
+    const progressInputEl = document.getElementById('t_progress');
+    if (progressInputEl) progressInputEl.disabled = !canTouchProgress;
+
+    const statusSelEl = document.getElementById('t_status');
+    if (statusSelEl) statusSelEl.disabled = !canTouchProgress;
+
+    const quickBtnsEl = document.getElementById('t_prog_quick_btns');
+    if (quickBtnsEl) quickBtnsEl.style.display = canTouchProgress ? 'flex' : 'none';
+
+    const addChecklistBtn = document.getElementById('btnAddChecklistBtn');
+    if (addChecklistBtn) addChecklistBtn.style.display = canTouchProgress ? '' : 'none';
+    const addChecklistWrap = document.getElementById('t_checklist_add_wrap');
+    if (addChecklistWrap) addChecklistWrap.style.display = canTouchProgress ? 'flex' : 'none';
+    const newChecklistInput = document.getElementById('t_new_checklist_title');
+    if (newChecklistInput) newChecklistInput.value = '';
+
+    // Note is editable if canTouchProgress
+    const noteEl = document.getElementById('t_note');
+    if (noteEl) noteEl.disabled = !canTouchProgress;
+
+    // Attachments upload is available if canTouchProgress
+    const uploadWrap = document.getElementById('t_upload_wrap');
+    if (uploadWrap) uploadWrap.style.display = canTouchProgress ? 'flex' : 'none';
+
+    // Save button: visible if user can edit or complete/update progress
+    const btnSaveTaskEl = document.getElementById('btnSaveTask');
+    if (btnSaveTaskEl) btnSaveTaskEl.style.display = canTouchProgress ? '' : 'none';
+
+    // Delete button: visible only if canUserDeleteTask
+    const btnDeleteTaskEl = document.getElementById('btnDeleteTask');
+    if (btnDeleteTaskEl) btnDeleteTaskEl.style.display = (t && canUserDeleteTask) ? '' : 'none';
+
+    // Title & Permission Badges
+    const titleEl = document.getElementById('taskModalTitle');
+    if (t) {
+      let badge = '';
+      if (isCurrentTaskReadOnly) {
+        badge = '<span class="badge b-gray" style="font-size:11px;margin-left:6px;vertical-align:middle">👁️ Chỉ xem</span>';
+      } else if (canUserEditTask) {
+        badge = '<span class="badge b-blue" style="font-size:11px;margin-left:6px;vertical-align:middle">✏️ Có quyền sửa</span>';
+      } else if (canUserCompleteTask) {
+        badge = '<span class="badge b-green" style="font-size:11px;margin-left:6px;vertical-align:middle">✓ Người thực hiện</span>';
+      }
+      titleEl.innerHTML = `Đầu việc ${state.CODE[t.id] || ''} ${badge}`;
+    } else {
+      titleEl.textContent = 'Đầu việc mới';
+    }
+
     openModalEl('modalTask');
     if (!t) setTimeout(() => document.getElementById('t_title').focus(), 50);
+  },
+
+  renderAssignees() {
+    const container = document.getElementById('t_assignees_selected');
+    const hiddenInput = document.getElementById('t_assignee');
+    const pickerSel = document.getElementById('t_assignee_picker');
+
+    if (hiddenInput) {
+      hiddenInput.value = draftAssignees.join(', ');
+    }
+
+    if (container) {
+      if (!draftAssignees.length) {
+        container.innerHTML = '<span class="small" style="color:var(--text-muted);font-style:italic">Chưa có người nhận việc (công việc chung)</span>';
+      } else {
+        container.innerHTML = draftAssignees.map((email, idx) => {
+          const u = state.memberBy(email);
+          const name = u ? (u.fullName || u.name) : state.shortName(email);
+          const initials = (name || email).split(' ').filter(Boolean).map(w => w[0]).slice(-2).join('').toUpperCase() || 'U';
+          const removeBtn = canUserEditTask
+            ? `<button type="button" class="chip-remove" onclick="window.app.removeAssignee(${idx})" title="Gỡ người này">✕</button>`
+            : '';
+          return `
+            <span class="assignee-chip" title="${state.esc(email)}">
+              <span class="chip-avatar">${state.esc(initials)}</span>
+              <span class="chip-name">${state.esc(name)}</span>
+              ${removeBtn}
+            </span>
+          `;
+        }).join('');
+      }
+    }
+
+    // Populate picker dropdown excluding already selected assignees
+    if (pickerSel) {
+      const selectedSet = new Set(draftAssignees.map(e => e.toLowerCase()));
+      const userList = (state.data.users || []).filter(u => u.isActive !== false && !selectedSet.has(String(u.email || '').toLowerCase()));
+
+      const projId = document.getElementById('t_project') ? document.getElementById('t_project').value : '';
+      const proj = state.projById(projId);
+      const projMemberUserIds = new Set();
+      if (proj && Array.isArray(proj.projectPermissions)) {
+        proj.projectPermissions.forEach(pp => {
+          if (pp.access && pp.access !== 'none') projMemberUserIds.add(pp.userId);
+        });
+      }
+
+      const renderOpt = u => {
+        const displayName = u.fullName ? `${u.fullName} (${u.username})` : u.username;
+        const unitStr = u.unit ? ` – ${u.unit}` : '';
+        return `<option value="${state.esc(String(u.email).toLowerCase())}">${state.esc(displayName + unitStr)}</option>`;
+      };
+
+      let html = '<option value="">+ Thêm người nhận việc…</option>';
+      if (proj && projMemberUserIds.size > 0) {
+        const inProj = userList.filter(u => projMemberUserIds.has(u.id));
+        const notInProj = userList.filter(u => !projMemberUserIds.has(u.id));
+        if (inProj.length) {
+          html += `<optgroup label="Thành viên triển khai dự án (${inProj.length})">${inProj.map(renderOpt).join('')}</optgroup>`;
+        }
+        if (notInProj.length) {
+          html += `<optgroup label="Tài khoản khác (${notInProj.length})">${notInProj.map(renderOpt).join('')}</optgroup>`;
+        }
+      } else {
+        html += userList.map(renderOpt).join('');
+      }
+      pickerSel.innerHTML = html;
+      pickerSel.value = '';
+    }
+  },
+
+  addAssigneeFromPicker(val) {
+    if (!canUserEditTask || !val) return;
+    const lower = val.trim().toLowerCase();
+    if (!draftAssignees.some(e => e.toLowerCase() === lower)) {
+      draftAssignees.push(lower);
+      this.renderAssignees();
+    }
+  },
+
+  removeAssignee(index) {
+    if (!canUserEditTask) return;
+    if (index >= 0 && index < draftAssignees.length) {
+      draftAssignees.splice(index, 1);
+      this.renderAssignees();
+    }
+  },
+
+  syncProgressDisplay() {
+    const progEl = document.getElementById('t_progress');
+    const val = progEl ? +progEl.value : 0;
+
+    const valEl = document.getElementById('t_progress_val');
+    if (valEl) valEl.textContent = val + '%';
+
+    const barFillEl = document.getElementById('t_progress_bar_fill');
+    if (barFillEl) barFillEl.style.width = Math.min(100, Math.max(0, val)) + '%';
+
+    const tagEl = document.getElementById('t_prog_status_tag');
+    if (tagEl) {
+      if (val === 100) {
+        tagEl.className = 'prog-status-tag tag-done';
+        tagEl.textContent = '✓ Đã hoàn thành';
+      } else if (val > 0) {
+        tagEl.className = 'prog-status-tag tag-doing';
+        tagEl.textContent = `⚡ Đang làm (${val}%)`;
+      } else {
+        tagEl.className = 'prog-status-tag tag-todo';
+        tagEl.textContent = '⏳ Chưa bắt đầu';
+      }
+    }
+
+    const summaryEl = document.getElementById('t_prog_summary_text');
+    if (summaryEl) {
+      const total = draftChecklist.length;
+      const done = draftChecklist.filter(c => c.done).length;
+      if (total > 0) {
+        const pct = Math.round((done / total) * 100);
+        summaryEl.textContent = `${done}/${total} bước checklist hoàn thành (${pct}%)`;
+      } else {
+        summaryEl.textContent = val === 100 ? 'Công việc đã hoàn thành 100%' : (val > 0 ? `Tiến độ hiện tại: ${val}%` : 'Chưa có bước thực hiện cụ thể');
+      }
+    }
+  },
+
+  renderChecklist() {
+    const container = document.getElementById('t_checklist_list');
+    const countBadge = document.getElementById('t_checklist_count');
+    const canTouch = canUserCompleteTask || canUserEditTask;
+
+    const total = draftChecklist.length;
+    const done = draftChecklist.filter(c => c.done).length;
+
+    if (countBadge) {
+      countBadge.textContent = `${done}/${total}`;
+      countBadge.className = `badge ${total > 0 && done === total ? 'b-green' : 'b-gray'}`;
+    }
+
+    if (container) {
+      if (!total) {
+        container.innerHTML = `<div class="checklist-empty">Chưa có bước thực hiện cụ thể nào. ${canTouch ? 'Bấm <b>+ Thêm bước thực hiện</b> để phân rã công việc chi tiết.' : ''}</div>`;
+      } else {
+        container.innerHTML = draftChecklist.map((c, i) => `
+          <div class="checklist-item ${c.done ? 'done' : ''}">
+            <input type="checkbox" id="chk_item_${i}" class="checklist-item-check" ${c.done ? 'checked' : ''} ${!canTouch ? 'disabled' : ''} onchange="window.app.toggleChecklistItem(${i})">
+            <label for="chk_item_${i}" class="checklist-item-title ${c.done ? 'strikethrough' : ''}">${state.esc(c.title)}</label>
+            ${canUserEditTask ? `<button type="button" class="ibtn checklist-del-btn" title="Xóa bước này" onclick="window.app.removeChecklistItem(${i})">✕</button>` : ''}
+          </div>
+        `).join('');
+      }
+    }
+
+    this.syncProgressDisplay();
+  },
+
+  addChecklistItemFromInput() {
+    const canTouch = canUserCompleteTask || canUserEditTask;
+    if (!canTouch) return;
+    const input = document.getElementById('t_new_checklist_title');
+    if (!input) return;
+    const title = input.value.trim();
+    if (!title) {
+      input.focus();
+      return;
+    }
+
+    draftChecklist.push({
+      id: state.uid(),
+      title,
+      done: false
+    });
+    input.value = '';
+
+    // Auto update progress based on checklist ratio
+    if (draftChecklist.length > 0) {
+      const done = draftChecklist.filter(c => c.done).length;
+      const pct = Math.round((done / draftChecklist.length) * 100);
+      document.getElementById('t_progress').value = pct;
+      this.onProgressInput();
+    }
+    this.renderChecklist();
+    input.focus();
+  },
+
+  promptAddChecklistItem() {
+    const canTouch = canUserCompleteTask || canUserEditTask;
+    if (!canTouch) return;
+    const title = prompt('Nhập tên bước thực hiện chi tiết:');
+    if (!title || !title.trim()) return;
+
+    draftChecklist.push({
+      id: state.uid(),
+      title: title.trim(),
+      done: false
+    });
+
+    // Auto update progress based on checklist ratio
+    if (draftChecklist.length > 0) {
+      const done = draftChecklist.filter(c => c.done).length;
+      const pct = Math.round((done / draftChecklist.length) * 100);
+      document.getElementById('t_progress').value = pct;
+      this.onProgressInput();
+    }
+    this.renderChecklist();
+  },
+
+  toggleChecklistItem(index) {
+    const canTouch = canUserCompleteTask || canUserEditTask;
+    if (!canTouch) return;
+    if (index < 0 || index >= draftChecklist.length) return;
+
+    draftChecklist[index].done = !draftChecklist[index].done;
+
+    // Auto recalculate progress based on checklist items
+    const total = draftChecklist.length;
+    const done = draftChecklist.filter(c => c.done).length;
+    const newPct = total > 0 ? Math.round((done / total) * 100) : 0;
+
+    const progEl = document.getElementById('t_progress');
+    if (progEl) {
+      progEl.value = newPct;
+      this.onProgressInput();
+    }
+    this.renderChecklist();
+  },
+
+  removeChecklistItem(index) {
+    if (!canUserEditTask) return;
+    if (index < 0 || index >= draftChecklist.length) return;
+    draftChecklist.splice(index, 1);
+
+    if (draftChecklist.length > 0) {
+      const done = draftChecklist.filter(c => c.done).length;
+      const newPct = Math.round((done / draftChecklist.length) * 100);
+      document.getElementById('t_progress').value = newPct;
+      this.onProgressInput();
+    }
+    this.renderChecklist();
+  },
+
+  setTaskProgressQuick(val) {
+    const canTouch = canUserCompleteTask || canUserEditTask;
+    if (!canTouch) return;
+    const num = Math.min(100, Math.max(0, +val));
+    const progEl = document.getElementById('t_progress');
+    if (progEl) {
+      progEl.value = num;
+      this.onProgressInput();
+    }
+    if (num === 100 && draftChecklist.length > 0) {
+      draftChecklist.forEach(c => c.done = true);
+    } else if (num === 0 && draftChecklist.length > 0) {
+      draftChecklist.forEach(c => c.done = false);
+    }
+    this.renderChecklist();
   },
 
   fillFolders(selectedFolderId) {
@@ -154,96 +446,79 @@ export const modals = {
       fs.map((f, i) => `<option value="${f.id}">${i + 1}. ${state.esc(f.name)}</option>`).join('');
 
     folderSel.value = selectedFolderId && fs.some(f => f.id === selectedFolderId) ? selectedFolderId : '';
-    folderSel.disabled = isCurrentTaskReadOnly || !p;
+    folderSel.disabled = !canUserEditTask || !p;
 
-    // Tự động gom nhóm danh sách người nhận theo thành viên triển khai dự án đã chọn
-    if (!isCurrentTaskReadOnly) {
-      const assigneeSel = document.getElementById('t_assignee');
-      if (assigneeSel) {
-        const currentAssigneeVal = assigneeSel.value;
-        const userList = (state.data.users || []).filter(u => u.isActive !== false);
-        const projMemberUserIds = new Set();
-        if (p && Array.isArray(p.projectPermissions)) {
-          p.projectPermissions.forEach(pp => {
-            if (pp.access && pp.access !== 'none') projMemberUserIds.add(pp.userId);
-          });
-        }
-
-        const renderUserOption = u => {
-          const displayName = u.fullName ? `${u.fullName} (${u.username})` : u.username;
-          const unitStr = u.unit ? ` – ${u.unit}` : '';
-          return `<option value="${state.esc(String(u.email).toLowerCase())}">${state.esc(displayName + unitStr)}</option>`;
-        };
-
-        let userOpts = '';
-        if (p && projMemberUserIds.size > 0) {
-          const inProj = userList.filter(u => projMemberUserIds.has(u.id));
-          const notInProj = userList.filter(u => !projMemberUserIds.has(u.id));
-          userOpts = `
-            <optgroup label="Thành viên triển khai dự án này (${inProj.length})">
-              ${inProj.map(renderUserOption).join('')}
-            </optgroup>
-            <optgroup label="Tất cả tài khoản (${notInProj.length})">
-              ${notInProj.map(renderUserOption).join('')}
-            </optgroup>
-          `;
-        } else {
-          userOpts = userList.map(renderUserOption).join('');
-        }
-        assigneeSel.innerHTML = '<option value="">— Chưa giao —</option>' + userOpts;
-        ensureSelectOption(assigneeSel, currentAssigneeVal);
-        assigneeSel.value = currentAssigneeVal;
-      }
+    // Refresh assignee picker based on newly selected project
+    if (canUserEditTask) {
+      this.renderAssignees();
     }
   },
 
   onProgressInput() {
-    if (isCurrentTaskReadOnly) return;
+    const canTouch = canUserCompleteTask || canUserEditTask;
+    if (!canTouch) return;
     const val = +document.getElementById('t_progress').value;
-    document.getElementById('t_progress_val').textContent = val;
     const statusSel = document.getElementById('t_status');
 
     if (val === 100) statusSel.value = 'done';
-    else if (val > 0) statusSel.value = 'doing';
-    else if (statusSel.value === 'done') statusSel.value = 'todo';
+    else if (val > 0) {
+      if (statusSel.value === 'todo') statusSel.value = 'doing';
+    } else if (statusSel.value === 'done') {
+      statusSel.value = 'todo';
+    }
+
+    this.syncProgressDisplay();
   },
 
   onStatusChange() {
-    if (isCurrentTaskReadOnly) return;
+    const canTouch = canUserCompleteTask || canUserEditTask;
+    if (!canTouch) return;
     const s = document.getElementById('t_status').value;
     const progEl = document.getElementById('t_progress');
 
-    if (s === 'done') progEl.value = 100;
-    else if (+progEl.value === 100) progEl.value = s === 'doing' ? 50 : 0;
+    if (s === 'done') {
+      progEl.value = 100;
+      if (draftChecklist.length > 0) draftChecklist.forEach(c => c.done = true);
+    } else if (+progEl.value === 100) {
+      progEl.value = s === 'doing' ? 50 : 0;
+      if (draftChecklist.length > 0) {
+        const half = Math.floor(draftChecklist.length / 2);
+        draftChecklist.forEach((c, i) => c.done = s === 'doing' ? i < half : false);
+      }
+    }
 
-    document.getElementById('t_progress_val').textContent = progEl.value;
+    this.syncProgressDisplay();
+    this.renderChecklist();
   },
 
   saveTask() {
     if (editTaskId) {
       const existing = state.taskById(editTaskId);
-      if (existing && existing.assignee && !state.canModifyTask(existing)) {
-        alert('Bạn không thể can thiệp hoặc chỉnh sửa công việc của người khác.');
+      if (existing && !state.canModifyTask(existing)) {
+        alert('Bạn không có quyền chỉnh sửa hoặc cập nhật công việc này.');
         return;
       }
     }
 
-    const title = document.getElementById('t_title').value.trim();
-    if (!title) {
+    const old = editTaskId ? state.taskById(editTaskId) : null;
+    let title = document.getElementById('t_title').value.trim();
+    if (canUserEditTask && !title) {
       document.getElementById('t_title').focus();
       return;
     }
+    if (!canUserEditTask && old) {
+      title = old.title;
+    }
 
-    const startDate = document.getElementById('t_start').value;
-    const dueDate = document.getElementById('t_due').value;
+    const startDate = canUserEditTask ? document.getElementById('t_start').value : (old ? old.startDate : '');
+    const dueDate = canUserEditTask ? document.getElementById('t_due').value : (old ? old.dueDate : '');
     if (startDate && dueDate && dueDate < startDate) {
       alert('Hạn chót phải sau hoặc bằng ngày bắt đầu.');
       return;
     }
 
-    const old = editTaskId ? state.taskById(editTaskId) : null;
-    const pid = document.getElementById('t_project').value;
-    const fid = document.getElementById('t_folder').value;
+    const pid = canUserEditTask ? document.getElementById('t_project').value : (old ? old.projectId : '');
+    const fid = canUserEditTask ? document.getElementById('t_folder').value : (old ? old.folderId : '');
 
     let sort = old ? old.sort : 10;
     if (!old || old.projectId !== pid || (old.folderId || '') !== fid) {
@@ -253,19 +528,24 @@ export const modals = {
       sort = same.reduce((m, t) => Math.max(m, Number(t.sort) || 0), 0) + 10;
     }
 
+    const assignerVal = canUserEditTask ? document.getElementById('t_assigner').value : (old ? old.assigner : '');
+    const assigneeVal = canUserEditTask ? draftAssignees.join(', ') : (old ? old.assignee : '');
+    const priorityVal = canUserEditTask ? document.getElementById('t_priority').value : (old ? old.priority : 'med');
+
     const record = Object.assign({ id: state.uid(), createdAt: Date.now(), deleted: false }, old || {}, {
       projectId: pid,
       folderId: fid,
       sort,
       title,
-      assigner: document.getElementById('t_assigner').value,
-      assignee: document.getElementById('t_assignee').value,
+      assigner: assignerVal,
+      assignee: assigneeVal,
       status: document.getElementById('t_status').value,
-      priority: document.getElementById('t_priority').value,
+      priority: priorityVal,
       progress: +document.getElementById('t_progress').value,
       startDate,
       dueDate,
       note: document.getElementById('t_note').value,
+      checklist: draftChecklist,
       files: taskFileCtx.files
     });
 
@@ -280,8 +560,8 @@ export const modals = {
   deleteTask() {
     const t = state.taskById(editTaskId);
     if (!t) return;
-    if (t.assignee && !state.canModifyTask(t)) {
-      alert('Bạn không thể can thiệp hoặc xóa công việc của người khác.');
+    if (!state.canDeleteTask(t)) {
+      alert('Bạn không có quyền xoá công việc này. Chỉ Quản trị viên (Admin) hoặc Người giao việc mới có quyền xoá.');
       return;
     }
     if (!confirm(`Xoá công việc "${t.title}"?`)) return;

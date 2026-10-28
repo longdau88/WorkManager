@@ -70,10 +70,12 @@ export const syncService = {
           if (record.id) {
             const existing = await taskRepository.findById(record.id);
             if (existing && existing.assignee && user) {
-              const targetAssignee = String(existing.assignee).trim().toLowerCase();
-              const isOwner = targetAssignee === userEmailLower || targetAssignee === userUsername || targetAssignee === userId;
-              if (!isOwner) {
-                console.warn(`[Sync] Blocked unauthorized edit on task ${record.id} assigned to ${existing.assignee} by ${user?.username}`);
+              const isAdmin = Boolean(user.isAdmin || user.roleName === 'admin' || (user.permissions || []).includes('edit_all_projects'));
+              const assignees = String(existing.assignee).split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
+              const isAssignee = assignees.some(a => a === userEmailLower || a === userUsername || a === userId);
+              const isAssigner = existing.assigner && String(existing.assigner).trim().toLowerCase() === userEmailLower;
+              if (!isAdmin && !isAssignee && !isAssigner) {
+                console.warn(`[Sync] Blocked unauthorized edit on task ${record.id} by ${user?.username}`);
                 break; // Skip applying this modification
               }
             }
