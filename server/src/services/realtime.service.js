@@ -1,10 +1,18 @@
 const clients = new Set();
 
 export const realtimeService = {
-    addClient(res) { clients.add(res); res.on('close', () => clients.delete(res)); },
-    publish(event, data) {
-        const payload = `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
-        clients.forEach(res => { try { res.write(payload); } catch (_) { clients.delete(res); } });
+    addClient(res, userId = null) {
+        clients.add({ res, userId });
+        res.on('close', () => {
+            for (const client of clients) if (client.res === res) clients.delete(client);
+        });
     },
-    heartbeat() { clients.forEach(res => { try { res.write(': heartbeat\n\n'); } catch (_) { clients.delete(res); } }); }
+    publish(event, data, targetUserId = null) {
+        const payload = `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
+        clients.forEach(client => {
+            if (targetUserId && client.userId !== targetUserId) return;
+            try { client.res.write(payload); } catch (_) { clients.delete(client); }
+        });
+    },
+    heartbeat() { clients.forEach(client => { try { client.res.write(': heartbeat\n\n'); } catch (_) { clients.delete(client); } }); }
 };

@@ -5,6 +5,7 @@ import { fieldRepository } from '../repositories/field.repository.js';
 import { v8Repository } from '../repositories/v8.repository.js';
 import { realtimeService } from './realtime.service.js';
 import { featureRepository } from '../repositories/feature.repository.js';
+import { notificationService } from './notification.service.js';
 
 export const syncService = {
   async getBootstrapData(user = null) {
@@ -189,6 +190,18 @@ export const syncService = {
           after: JSON.stringify(result)
         });
         if (auditType === 'comment' && !record.deleted) realtimeService.publish('comment', result);
+        if (type === 'task' && !record.deleted) {
+          const taskProject = result.projectId ? projects.find(project => project.id === result.projectId) : null;
+          const users = await userRepository.findAll();
+          await notificationService.notifyTaskChange({
+            task: result,
+            before,
+            actorId: user?.id || null,
+            users,
+            project: taskProject,
+            operationKey: `${result.id}:${record.updatedAt || result.updatedAt || Date.now()}`
+          });
+        }
       }
     }
 

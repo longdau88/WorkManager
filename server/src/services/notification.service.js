@@ -14,7 +14,60 @@ function recipients(project, users, extra = []) {
     return users.filter(user => ids.has(user.id));
 }
 
+function taskUsers(task, users) {
+    const identifiers = new Set();
+    const assignees = Array.isArray(task?.assignee) ? task.assignee : String(task?.assignee || '').split(',');
+    assignees.concat(task?.assigner || []).forEach(value => identifiers.add(String(value).trim().toLowerCase()));
+    return users.filter(user => identifiers.has(String(user.id).toLowerCase())
+        || identifiers.has(String(user.email || '').toLowerCase())
+        || identifiers.has(String(user.username || '').toLowerCase()));
+}
+
+async function createImmediateNotification({ user, type, task, title, message, operationKey }) {
+    const record = await featureRepository.createNotification({
+        id: `ntf_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+        userId: user.id,
+        type,
+        title,
+        message,
+        entityType: 'task',
+        entityId: task.id,
+        projectId: task.projectId || null,
+        dueAt: task.dueDate || null,
+        deliveryKey: `${operationKey}:${user.id}`
+    });
+    realtimeService.publish('notification', record, user.id);
+}
+
 export const notificationService = {
+    async notifyTaskChange({ task, before, actorId, users, project, operationKey }) {
+        const admins = users.filter(user => user.isActive !== false
+            && (user.role?.name === 'admin' || user.role?.permissions?.includes('edit_all_projects')));
+        const participants = taskUsers(task, users);
+        const oldAssignees = new Set(taskUsers({ assignee: before?.assignee }, users).map(user => user.id));
+        const newAssignees = participants.filter(user => !oldAssignees.has(user.id));
+        const isProgressChanged = Boolean(before) && (
+            Number(before.progress || 0) !== Number(task.progress || 0)
+            || before.status !== task.status
+            || JSON.stringify(before.checklist || []) !== JSON.stringify(task.checklist || [])
+        );
+        const targets = isProgressChanged ? [...participants, ...admins] : newAssignees;
+        const uniqueTargets = [...new Map(targets.filter(user => user.id !== actorId).map(user => [user.id, user])).values()];
+        const projectName = project?.name ? ` trong dự án ${project.name}` : '';
+        for (const user of uniqueTargets) {
+            const isAssignment = newAssignees.some(assignee => assignee.id === user.id) && !isProgressChanged;
+            await createImmediateNotification({
+                user,
+                type: isAssignment ? 'task_assigned' : 'task_progress',
+                task,
+                title: isAssignment ? 'Bạn được giao một công việc mới' : 'Công việc vừa được cập nhật tiến độ',
+                message: isAssignment
+                    ? `${task.title || 'Công việc'}${projectName} đã được giao cho bạn.`
+                    : `${task.title || 'Công việc'} đạt ${task.progress || 0}% (${task.status || 'todo'}).`,
+                operationKey
+            });
+        }
+    },
     async run() {
         const [projects, tasks, users, issues, guarantees, receipts] = await Promise.all([
             projectRepository.findAll({ includeDeleted: false }), taskRepository.findAll({ includeDeleted: false }), userRepository.findAll(),
@@ -29,7 +82,7 @@ export const notificationService = {
             for (const user of targets) {
                 const key = `${user.id}:${type}:${item.id}:${String(dueAt).slice(0, 10)}`;
                 const record = await featureRepository.createNotification({ id: `ntf_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`, userId: user.id, type, title, message, entityType: type, entityId: item.id, projectId: item.projectId || null, dueAt: String(dueAt).slice(0, 10), deliveryKey: key });
-                realtimeService.publish('notification', record);
+                realtimeService.publish('notification', record, user.id);
             }
         };
         const dueSoon = value => { const date = day(value); return date && date.getTime() >= now.getTime() - dayMs && date.getTime() <= now.getTime() + 3 * dayMs; };
