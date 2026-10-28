@@ -143,6 +143,17 @@ class ApiClient {
     return `${this.baseUrl}/exports/report.${format}?token=${encodeURIComponent(this.token)}`;
   }
 
+  async downloadReport(format) {
+    const response = await fetch(`${this.baseUrl}/exports/report.${format}`, {
+      headers: { Authorization: `Bearer ${this.token}` }
+    });
+    if (!response.ok) {
+      const body = await response.json().catch(() => null);
+      throw new Error(body?.message || `Không thể tạo báo cáo (${response.status})`);
+    }
+    return response.blob();
+  }
+
   createBackup() { return this.request('/backup', { method: 'POST' }); }
 
   connectEvents(onEvent) {

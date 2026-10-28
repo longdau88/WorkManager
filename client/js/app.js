@@ -35,7 +35,7 @@ class App {
       this.render();
       state.flush();
       this.startRealtime();
-      this.presenceTimer = setInterval(() => api.heartbeatPresence(state.curProject === 'all' ? null : state.curProject).catch(() => { }), 60000);
+      this.startPresence();
     }
 
     // Periodic Auto-Sync
@@ -59,8 +59,18 @@ class App {
       }
       state.persist();
       this.updateNotificationCount();
+      this.updateOnlineCount();
       state.notify();
     });
+  }
+
+  startPresence() {
+    clearInterval(this.presenceTimer);
+    const heartbeat = () => api.heartbeatPresence(state.curProject === 'all' ? null : state.curProject)
+      .then(() => this.updateOnlineCount())
+      .catch(() => { });
+    heartbeat();
+    this.presenceTimer = setInterval(heartbeat, 60000);
   }
 
   updateNotificationCount() {
@@ -69,25 +79,98 @@ class App {
     if (element) element.textContent = String(count);
   }
 
+  updateOnlineCount() {
+    const cutoff = Date.now() - 120000;
+    const online = state.data.presence.filter(item => new Date(item.lastSeen).getTime() >= cutoff);
+    const element = document.getElementById('onlineCount');
+    if (element) element.textContent = String(new Set(online.map(item => item.userId)).size);
+  }
+
   async showNotifications() {
     try {
-      const notifications = await api.getNotifications(true);
+      this.closeHeaderPopovers();
+      const notifications = await api.getNotifications(false);
       state.data.notifications = notifications || [];
       state.persist();
       this.updateNotificationCount();
-      if (!notifications.length) return alert('Không có thông báo mới.');
-      alert(notifications.map(item => `${item.title}\n${item.message || ''}`).join('\n\n'));
-      await api.markNotificationsRead(notifications.map(item => item.id));
-      state.data.notifications.forEach(item => { item.readAt = new Date().toISOString(); });
-      this.updateNotificationCount();
+      const popover = document.getElementById('notificationPopover');
+      const list = document.getElementById('notificationList');
+      if (!popover || !list) return;
+      list.innerHTML = notifications.length ? notifications.map(item => `
+        <div class="header-popover-item ${item.readAt ? '' : 'unread'}" data-notification-id="${state.esc(item.id)}">
+          <div class="header-popover-item-title">${state.esc(item.title)}</div>
+          <div>${state.esc(item.message || '')}</div>
+          <div class="header-popover-item-meta">${item.createdAt ? new Date(item.createdAt).toLocaleString('vi-VN') : ''}</div>
+        </div>
+      `).join('') : '<div class="header-popover-empty">Không có thông báo.</div>';
+      popover.hidden = false;
+      const unreadIds = notifications.filter(item => !item.readAt).map(item => item.id);
+      if (unreadIds.length) {
+        await api.markNotificationsRead(unreadIds);
+        state.data.notifications.forEach(item => { if (unreadIds.includes(item.id)) item.readAt = new Date().toISOString(); });
+        state.persist();
+        this.updateNotificationCount();
+      }
     } catch (error) {
-      alert(`Không thể tải thông báo: ${error.message}`);
+      this.showActionStatus(`Lỗi thông báo: ${error.message}`, true);
     }
   }
 
-  downloadReport(format) {
+  async downloadReport(format, button) {
     if (!api.token) return this.showLoginModal();
-    window.open(api.reportUrl(format), '_blank', 'noopener');
+    const original = button ? button.textContent : '';
+    try {
+      if (button) { button.disabled = true; button.textContent = 'Đang tạo…'; }
+      this.showActionStatus(`Đang tạo báo cáo ${format.toUpperCase()}…`);
+      const blob = await api.downloadReport(format);
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `workmanager-report.${format}`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+      this.showActionStatus(`Đã tải báo cáo ${format.toUpperCase()}`);
+    } catch (error) {
+      this.showActionStatus(`Không thể xuất ${format.toUpperCase()}: ${error.message}`, true);
+    } finally {
+      if (button) { button.disabled = false; button.textContent = original; }
+    }
+  }
+
+  async showOnlineUsers() {
+    this.closeHeaderPopovers();
+    try {
+      const presence = await api.getPresence(state.curProject === 'all' ? null : state.curProject);
+      state.data.presence = presence || [];
+      this.updateOnlineCount();
+      const usersById = new Map((state.data.users || []).map(user => [user.id, user]));
+      const unique = [...new Map(state.data.presence.map(item => [item.userId, item])).values()];
+      const list = document.getElementById('onlineUserList');
+      if (list) list.innerHTML = unique.length ? unique.map(item => {
+        const user = usersById.get(item.userId);
+        const name = user?.fullName || user?.username || item.userId;
+        return `<div class="header-popover-item"><div class="header-popover-item-title"><span style="color:var(--success-main)">●</span> ${state.esc(name)}</div><div class="header-popover-item-meta">Hoạt động ${new Date(item.lastSeen).toLocaleString('vi-VN')}</div></div>`;
+      }).join('') : '<div class="header-popover-empty">Chưa có người dùng online.</div>';
+      const popover = document.getElementById('onlinePopover');
+      if (popover) popover.hidden = false;
+    } catch (error) {
+      this.showActionStatus(`Không thể tải danh sách online: ${error.message}`, true);
+    }
+  }
+
+  closeHeaderPopovers() {
+    ['notificationPopover', 'onlinePopover'].forEach(id => { const element = document.getElementById(id); if (element) element.hidden = true; });
+  }
+
+  showActionStatus(message, isError = false) {
+    const element = document.getElementById('reportStatus');
+    if (!element) return;
+    element.textContent = message;
+    element.style.color = isError ? 'var(--danger-main)' : 'var(--text-muted)';
+    clearTimeout(this.actionStatusTimer);
+    this.actionStatusTimer = setTimeout(() => { element.textContent = ''; }, 5000);
   }
 
   bindEvents() {

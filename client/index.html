@@ -52,8 +52,11 @@
       <span id="currentUserBadge" class="user-badge" title="Tài khoản">admin</span>
       <button class="btn ghost" id="btnNotifications" onclick="window.app.showNotifications()"
         title="Thông báo chưa đọc">🔔 <span id="notificationCount">0</span></button>
-      <button class="btn ghost" onclick="window.app.downloadReport('docx')" title="Tải báo cáo DOCX">DOCX</button>
-      <button class="btn ghost" onclick="window.app.downloadReport('pdf')" title="Tải báo cáo PDF">PDF</button>
+      <button class="btn ghost" id="btnOnlineUsers" onclick="window.app.showOnlineUsers()"
+        title="Người dùng đang online">● <span id="onlineCount">0</span></button>
+      <button class="btn ghost report-btn" onclick="window.app.downloadReport('docx', this)" title="Tải báo cáo DOCX">DOCX</button>
+      <button class="btn ghost report-btn" onclick="window.app.downloadReport('pdf', this)" title="Tải báo cáo PDF">PDF</button>
+      <span id="reportStatus" class="header-action-status" aria-live="polite"></span>
       <button class="btn ghost" id="btnLogout" onclick="window.app.logout()" title="Đăng xuất" style="display:none">Đăng
         xuất</button>
       <span id="syncStatus" class="sync-indicator ok" title="Đã đồng bộ">● Đã đồng bộ</span>
@@ -62,6 +65,16 @@
         title="Đổi giao diện Sáng / Tối">🌙</button>
     </div>
   </header>
+
+  <div id="notificationPopover" class="header-popover" hidden>
+    <div class="header-popover-head"><b>Thông báo</b><button class="ibtn" onclick="window.app.closeHeaderPopovers()" title="Đóng">✕</button></div>
+    <div id="notificationList" class="header-popover-list"></div>
+  </div>
+
+  <div id="onlinePopover" class="header-popover" hidden>
+    <div class="header-popover-head"><b>Đang online</b><button class="ibtn" onclick="window.app.closeHeaderPopovers()" title="Đóng">✕</button></div>
+    <div id="onlineUserList" class="header-popover-list"></div>
+  </div>
 
   <!-- Main Body Layout -->
   <div class="layout">

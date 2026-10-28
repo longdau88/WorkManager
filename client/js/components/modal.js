@@ -1789,6 +1789,7 @@ export const modals = {
       errEl.textContent = '';
       window.app.render();
       window.app.startRealtime();
+      window.app.startPresence();
       state.flush();
     } catch (err) {
       errEl.textContent = '❌ ' + (err.message || 'Đăng nhập không thành công');
