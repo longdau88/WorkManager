@@ -27,6 +27,14 @@ class ApiClient {
     this.setAuth('', null);
   }
 
+  get userEmail() {
+    return this.currentUser?.email ? String(this.currentUser.email).toLowerCase() : '';
+  }
+
+  get username() {
+    return this.currentUser?.username ? String(this.currentUser.username).toLowerCase() : '';
+  }
+
   async request(endpoint, options = {}) {
     const url = `${this.baseUrl}${endpoint}`;
     const headers = {

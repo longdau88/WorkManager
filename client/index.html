@@ -97,6 +97,9 @@
     <div class="modal" role="dialog" aria-labelledby="taskModalTitle">
       <h2 id="taskModalTitle">Công việc</h2>
 
+      <!-- Thông báo khi ở Chế độ Chỉ xem (không thể can thiệp vào task của người khác) -->
+      <div id="taskReadOnlyNotice" class="task-readonly-notice" style="display:none"></div>
+
       <div class="field">
         <label for="t_title">Tên công việc *</label>
         <input id="t_title" placeholder="Nhập tiêu đề công việc…">
@@ -158,11 +161,13 @@
       <div class="field">
         <label>Tệp đính kèm & Hình ảnh</label>
         <div class="files" id="t_files_list"></div>
-        <label class="btn" style="display:inline-flex;margin-top:4px">
-          📎 Thêm tệp / ảnh
-          <input type="file" multiple hidden onchange="window.app.handleTaskFileUpload(this)">
-        </label>
-        <span class="small" id="t_upload_status" style="margin-left:8px;color:var(--pri-500)"></span>
+        <div id="t_upload_wrap" style="display:flex;align-items:center;gap:8px;margin-top:4px">
+          <label class="btn" style="display:inline-flex">
+            📎 Thêm tệp / ảnh
+            <input type="file" multiple hidden onchange="window.app.handleTaskFileUpload(this)">
+          </label>
+          <span class="small" id="t_upload_status" style="color:var(--pri-500)"></span>
+        </div>
       </div>
 
       <div class="modal-actions">

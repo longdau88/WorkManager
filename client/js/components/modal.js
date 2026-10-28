@@ -9,12 +9,14 @@ let selColor = CONFIG.DEFAULT_COLOR;
 let draftFolders = [];
 let taskFileCtx = { files: [], added: [], removed: [] };
 let projFileCtx = { files: [], added: [], removed: [] };
+let isCurrentTaskReadOnly = false;
 
 export const modals = {
   // ================= TASK MODAL =================
   openTask(id, folderId) {
     editTaskId = id || null;
     const t = id ? state.taskById(id) : null;
+    isCurrentTaskReadOnly = Boolean(t && t.assignee && !state.canModifyTask(t));
 
     // Fill Projects dropdown
     const projSel = document.getElementById('t_project');
@@ -22,17 +24,44 @@ export const modals = {
     projSel.innerHTML = '<option value="">— Không thuộc dự án —</option>' +
       sortedProjects.map(p => `<option value="${p.id}">${state.esc(p.name)}</option>`).join('');
 
-    projSel.value = t ? (t.projectId || '') : (state.curProject === 'all' ? '' : state.curProject);
+    const targetProjId = t ? (t.projectId || '') : (state.curProject === 'all' ? '' : state.curProject);
+    projSel.value = targetProjId;
 
     this.fillFolders(t ? t.folderId : (folderId && folderId !== '__none' ? folderId : ''));
 
     // Fill Assigners and Assignees from Users
     const userList = (state.data.users || []).filter(u => u.isActive !== false);
-    const userOpts = userList.map(u => {
+    const proj = state.projById(targetProjId);
+
+    // Identify project implementing members (from projectPermissions)
+    const projMemberUserIds = new Set();
+    if (proj && Array.isArray(proj.projectPermissions)) {
+      proj.projectPermissions.forEach(pp => {
+        if (pp.access && pp.access !== 'none') projMemberUserIds.add(pp.userId);
+      });
+    }
+
+    const renderUserOption = u => {
       const displayName = u.fullName ? `${u.fullName} (${u.username})` : u.username;
       const unitStr = u.unit ? ` – ${u.unit}` : '';
       return `<option value="${state.esc(String(u.email).toLowerCase())}">${state.esc(displayName + unitStr)}</option>`;
-    }).join('');
+    };
+
+    let userOpts = '';
+    if (proj && projMemberUserIds.size > 0) {
+      const inProj = userList.filter(u => projMemberUserIds.has(u.id));
+      const notInProj = userList.filter(u => !projMemberUserIds.has(u.id));
+      userOpts = `
+        <optgroup label="Thành viên triển khai dự án này (${inProj.length})">
+          ${inProj.map(renderUserOption).join('')}
+        </optgroup>
+        <optgroup label="Tất cả tài khoản (${notInProj.length})">
+          ${notInProj.map(renderUserOption).join('')}
+        </optgroup>
+      `;
+    } else {
+      userOpts = userList.map(renderUserOption).join('');
+    }
 
     const userEmail = api.userEmail;
     const meOpt = userEmail && !state.memberBy(userEmail) ? `<option value="${state.esc(userEmail)}">Tôi (${state.esc(userEmail)})</option>` : '';
@@ -49,8 +78,53 @@ export const modals = {
     assignerSel.value = t ? (t.assigner || '') : (userEmail || '');
     assigneeSel.value = t ? (t.assignee || '') : '';
 
+    // Notice banner for Read-Only mode
+    const noticeEl = document.getElementById('taskReadOnlyNotice');
+    if (noticeEl) {
+      if (isCurrentTaskReadOnly) {
+        const whoName = state.fullName(t.assignee) || t.assignee;
+        noticeEl.innerHTML = `
+          <div class="readonly-icon">🔒</div>
+          <div class="readonly-text">
+            <b>Chế độ chỉ xem</b>: Công việc này được giao cho <b>${state.esc(whoName)}</b>.
+            <div class="readonly-sub">Bạn có thể theo dõi chi tiết và tiến độ nhưng <u>không thể can thiệp hoặc chỉnh sửa</u> công việc của người khác.</div>
+          </div>
+        `;
+        noticeEl.style.display = 'flex';
+      } else {
+        noticeEl.style.display = 'none';
+        noticeEl.innerHTML = '';
+      }
+    }
+
+    // Toggle disabled state on inputs
+    const taskInputIds = [
+      't_title', 't_project', 't_folder', 't_assigner', 't_assignee',
+      't_status', 't_priority', 't_start', 't_due', 't_progress', 't_note'
+    ];
+    taskInputIds.forEach(fid => {
+      const el = document.getElementById(fid);
+      if (el) el.disabled = isCurrentTaskReadOnly;
+    });
+
+    const uploadWrap = document.getElementById('t_upload_wrap');
+    if (uploadWrap) uploadWrap.style.display = isCurrentTaskReadOnly ? 'none' : 'flex';
+
+    const btnSaveTaskEl = document.getElementById('btnSaveTask');
+    if (btnSaveTaskEl) btnSaveTaskEl.style.display = isCurrentTaskReadOnly ? 'none' : '';
+
+    const btnDeleteTaskEl = document.getElementById('btnDeleteTask');
+    if (btnDeleteTaskEl) btnDeleteTaskEl.style.display = (t && !isCurrentTaskReadOnly) ? '' : 'none';
+
+    // Title
+    const titleEl = document.getElementById('taskModalTitle');
+    if (t) {
+      titleEl.innerHTML = `Đầu việc ${state.CODE[t.id] || ''} ${isCurrentTaskReadOnly ? '<span class="badge b-gray" style="font-size:11px;margin-left:6px;vertical-align:middle">🔒 Chỉ xem</span>' : ''}`;
+    } else {
+      titleEl.textContent = 'Đầu việc mới';
+    }
+
     // Populate Fields
-    document.getElementById('taskModalTitle').textContent = t ? `Đầu việc ${state.CODE[t.id] || ''}` : 'Đầu việc mới';
     document.getElementById('t_title').value = t ? t.title : '';
     document.getElementById('t_status').value = t ? (t.status || 'todo') : 'todo';
     document.getElementById('t_priority').value = t ? (t.priority || 'med') : 'med';
@@ -61,8 +135,6 @@ export const modals = {
     document.getElementById('t_progress').value = progVal;
     document.getElementById('t_progress_val').textContent = progVal;
     document.getElementById('t_note').value = t ? (t.note || '') : '';
-
-    document.getElementById('btnDeleteTask').style.display = t ? '' : 'none';
 
     // Files
     taskFileCtx = { files: t ? [...(t.files || [])] : [], added: [], removed: [] };
@@ -82,10 +154,51 @@ export const modals = {
       fs.map((f, i) => `<option value="${f.id}">${i + 1}. ${state.esc(f.name)}</option>`).join('');
 
     folderSel.value = selectedFolderId && fs.some(f => f.id === selectedFolderId) ? selectedFolderId : '';
-    folderSel.disabled = !p;
+    folderSel.disabled = isCurrentTaskReadOnly || !p;
+
+    // Tự động gom nhóm danh sách người nhận theo thành viên triển khai dự án đã chọn
+    if (!isCurrentTaskReadOnly) {
+      const assigneeSel = document.getElementById('t_assignee');
+      if (assigneeSel) {
+        const currentAssigneeVal = assigneeSel.value;
+        const userList = (state.data.users || []).filter(u => u.isActive !== false);
+        const projMemberUserIds = new Set();
+        if (p && Array.isArray(p.projectPermissions)) {
+          p.projectPermissions.forEach(pp => {
+            if (pp.access && pp.access !== 'none') projMemberUserIds.add(pp.userId);
+          });
+        }
+
+        const renderUserOption = u => {
+          const displayName = u.fullName ? `${u.fullName} (${u.username})` : u.username;
+          const unitStr = u.unit ? ` – ${u.unit}` : '';
+          return `<option value="${state.esc(String(u.email).toLowerCase())}">${state.esc(displayName + unitStr)}</option>`;
+        };
+
+        let userOpts = '';
+        if (p && projMemberUserIds.size > 0) {
+          const inProj = userList.filter(u => projMemberUserIds.has(u.id));
+          const notInProj = userList.filter(u => !projMemberUserIds.has(u.id));
+          userOpts = `
+            <optgroup label="Thành viên triển khai dự án này (${inProj.length})">
+              ${inProj.map(renderUserOption).join('')}
+            </optgroup>
+            <optgroup label="Tất cả tài khoản (${notInProj.length})">
+              ${notInProj.map(renderUserOption).join('')}
+            </optgroup>
+          `;
+        } else {
+          userOpts = userList.map(renderUserOption).join('');
+        }
+        assigneeSel.innerHTML = '<option value="">— Chưa giao —</option>' + userOpts;
+        ensureSelectOption(assigneeSel, currentAssigneeVal);
+        assigneeSel.value = currentAssigneeVal;
+      }
+    }
   },
 
   onProgressInput() {
+    if (isCurrentTaskReadOnly) return;
     const val = +document.getElementById('t_progress').value;
     document.getElementById('t_progress_val').textContent = val;
     const statusSel = document.getElementById('t_status');
@@ -96,6 +209,7 @@ export const modals = {
   },
 
   onStatusChange() {
+    if (isCurrentTaskReadOnly) return;
     const s = document.getElementById('t_status').value;
     const progEl = document.getElementById('t_progress');
 
@@ -106,6 +220,14 @@ export const modals = {
   },
 
   saveTask() {
+    if (editTaskId) {
+      const existing = state.taskById(editTaskId);
+      if (existing && existing.assignee && !state.canModifyTask(existing)) {
+        alert('Bạn không thể can thiệp hoặc chỉnh sửa công việc của người khác.');
+        return;
+      }
+    }
+
     const title = document.getElementById('t_title').value.trim();
     if (!title) {
       document.getElementById('t_title').focus();
@@ -158,6 +280,10 @@ export const modals = {
   deleteTask() {
     const t = state.taskById(editTaskId);
     if (!t) return;
+    if (t.assignee && !state.canModifyTask(t)) {
+      alert('Bạn không thể can thiệp hoặc xóa công việc của người khác.');
+      return;
+    }
     if (!confirm(`Xoá công việc "${t.title}"?`)) return;
 
     state.commit('task', { ...t, deleted: true });
@@ -174,7 +300,7 @@ export const modals = {
           <a href="${state.esc(f.url)}" target="_blank" rel="noopener">${state.esc(f.name)}</a>
           <span class="small">${fmtFileSize(f.size)}</span>
         </div>
-        <button class="ibtn" title="Gỡ tệp" onclick="window.app.removeTaskFile(${i})">✕</button>
+        ${!isCurrentTaskReadOnly ? `<button class="ibtn" title="Gỡ tệp" onclick="window.app.removeTaskFile(${i})">✕</button>` : ''}
       </div>
     `).join('') || '<span class="small" style="color:var(--text-muted)">Chưa có tệp đính kèm</span>';
   },

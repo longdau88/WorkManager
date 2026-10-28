@@ -152,6 +152,10 @@ class App {
   toggleDone(id) {
     const t = state.taskById(id);
     if (!t) return;
+    if (!state.canModifyTask(t)) {
+      this.notifyNotTaskOwner(id);
+      return;
+    }
     const isDone = t.status === 'done';
     const updated = {
       ...t,
@@ -159,6 +163,19 @@ class App {
       progress: isDone ? 90 : 100
     };
     state.commit('task', updated);
+  }
+
+  notifyNotTaskOwner(id) {
+    const t = state.taskById(id);
+    const who = t && t.assignee ? state.shortName(t.assignee) : 'thành viên khác';
+    alert(`🔒 Bạn không thể can thiệp vào công việc của người khác.\n\nCông việc này được giao cho "${who}". Chỉ người nhận việc mới có quyền cập nhật tiến độ và trạng thái.`);
+  }
+
+  setAssigneeFilter(email) {
+    state.assigneeFilter = email || '';
+    const sel = document.getElementById('assigneeFilter');
+    if (sel) sel.value = state.assigneeFilter;
+    renderTasksMain();
   }
 
   flushSync() {
@@ -211,6 +228,7 @@ class App {
   closeTaskModal() { closeModalEl('modalTask'); }
   saveTaskModal() { modals.saveTask(); }
   deleteTaskModal() { modals.deleteTask(); }
+  fillFolders(folderId) { modals.fillFolders(folderId); }
   onTaskProgressInput() { modals.onProgressInput(); }
   onTaskStatusChange() { modals.onStatusChange(); }
   handleTaskFileUpload(input) { modals.handleTaskFileUpload(input); }

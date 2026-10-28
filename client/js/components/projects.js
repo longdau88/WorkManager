@@ -111,13 +111,80 @@ export function renderProjectHeader() {
 
   const isOpen = localStorage.getItem('wm.infoOpen') === 'true';
 
+  // Thống kê thành viên tham gia triển khai dự án
+  const projTasks = state.data.tasks.filter(t => t.projectId === p.id);
+  const memberMap = new Map();
+
+  // 1. Từ phân quyền dự án (projectPermissions)
+  (p.projectPermissions || []).forEach(pp => {
+    if (pp.access && pp.access !== 'none') {
+      const u = (state.data.users || []).find(x => x.id === pp.userId);
+      const email = u ? u.email : pp.userId;
+      if (email) {
+        memberMap.set(String(email).toLowerCase(), {
+          email: String(email).toLowerCase(),
+          name: u ? (u.fullName || u.username) : email,
+          access: pp.access,
+          tasksCount: 0,
+          tasksDone: 0
+        });
+      }
+    }
+  });
+
+  // 2. Từ các đầu việc đã giao (task assignees)
+  projTasks.forEach(t => {
+    if (t.assignee) {
+      const em = String(t.assignee).toLowerCase();
+      let m = memberMap.get(em);
+      if (!m) {
+        const u = state.memberBy(em);
+        m = {
+          email: em,
+          name: u ? (u.fullName || u.name || em) : state.shortName(em),
+          access: 'member',
+          tasksCount: 0,
+          tasksDone: 0
+        };
+        memberMap.set(em, m);
+      }
+      m.tasksCount++;
+      if (t.status === 'done') m.tasksDone++;
+    }
+  });
+
+  const memberList = Array.from(memberMap.values());
+  const curFilterAssignee = (state.assigneeFilter || '').toLowerCase();
+
+  const membersHtml = `
+    <div class="project-members-bar">
+      <span class="project-members-label">👥 Thành viên triển khai (${memberList.length}):</span>
+      <div class="project-members-chips">
+        ${memberList.map(m => {
+          const isAct = curFilterAssignee === m.email;
+          const pct = m.tasksCount ? Math.round((m.tasksDone / m.tasksCount) * 100) : 0;
+          return `
+            <span class="project-member-chip ${isAct ? 'active' : ''}" onclick="window.app.setAssigneeFilter('${isAct ? '' : state.esc(m.email)}')" title="Lọc theo ${state.esc(m.name)} (${m.tasksDone}/${m.tasksCount} việc hoàn thành)">
+              👤 <b>${state.esc(m.name)}</b>
+              <span class="chip-progress">${m.tasksCount ? `${m.tasksDone}/${m.tasksCount} (${pct}%)` : 'Chưa giao việc'}</span>
+            </span>
+          `;
+        }).join('')}
+        <button class="btn ghost" style="padding:2px 8px;font-size:11px;color:var(--pri-500)" onclick="window.app.openProjectPermissionsModal('${p.id}')" title="Thêm / Phân quyền tài khoản tham gia triển khai dự án">
+          + Phân quyền tài khoản
+        </button>
+      </div>
+    </div>
+  `;
+
   container.innerHTML = `
     <div class="phead-card anim-slide-up">
       <div class="proj-row">
         <span class="proj-dot" style="background:${c};width:14px;height:14px"></span>
         <b style="font-size:var(--font-lg);flex:1">${state.esc(p.name)}</b>
         <div style="display:flex;gap:6px">
-          <button class="btn" onclick="window.app.openProjectPermissionsModal('${p.id}')" title="Phân quyền tài khoản đối với dự án này">🔒 Phân quyền</button>
+          <button class="btn primary" onclick="window.app.openTaskModal(null, null)" title="Tạo và giao việc mới trong dự án này">+ Giao việc</button>
+          <button class="btn" onclick="window.app.openProjectPermissionsModal('${p.id}')" title="Phân quyền tài khoản đối với dự án này">👥 Phân quyền</button>
           <button class="btn" onclick="window.app.openProjectModal('${p.id}')">✎ Sửa</button>
         </div>
       </div>
@@ -130,6 +197,7 @@ export function renderProjectHeader() {
         ${s.overdue ? `<span class="badge b-red">${s.overdue} việc quá hạn</span>` : ''}
         ${dueBadge}
       </div>
+      ${membersHtml}
       ${(chips.length || p.note || filesHtml) ? `
         <details ${isOpen ? 'open' : ''} ontoggle="localStorage.setItem('wm.infoOpen', this.open)">
           <summary>Thông tin chi tiết dự án${chips.length ? ` (${chips.length})` : ''}${p.files && p.files.length ? ` · 📎${p.files.length}` : ''}</summary>

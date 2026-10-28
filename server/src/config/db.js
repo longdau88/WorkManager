@@ -295,7 +295,7 @@ export function readFallbackData() {
       const content = fs.readFileSync(fallbackDbFile, 'utf-8');
       const parsed = JSON.parse(content);
       if (!parsed.roles) parsed.roles = DEFAULT_ROLES;
-      if (!parsed.users) parsed.users = [];
+      if (!parsed.users || !parsed.users.length) parsed.users = getInitialFallbackData().users;
       if (!parsed.projectPermissions) parsed.projectPermissions = [];
       return parsed;
     }

@@ -1,5 +1,6 @@
 import { state } from '../state.js';
 import { CONFIG } from '../config.js';
+import { api } from '../api.js';
 
 let sortablesInstances = [];
 
@@ -120,6 +121,8 @@ function taskItemHtml(t, showProjectName, canDrag) {
   const done = t.status === 'done';
   const pc = p ? state.esc(p.color || CONFIG.DEFAULT_COLOR) : '';
   const nFiles = (t.files || []).length;
+  const canEdit = state.canModifyTask(t);
+  const isOther = Boolean(t.assignee && !canEdit);
 
   let who = '';
   if (t.assignee) {
@@ -133,11 +136,21 @@ function taskItemHtml(t, showProjectName, canDrag) {
     ? '<span class="done-badge">✓ Xong</span>'
     : `<span class="task-progress"><span class="bar mini"><i style="width:${pg}%"></i></span>${pg}%</span>`;
 
+  // Checkbox: nếu là task của người khác thì không cho tick, hiển thị cảnh báo khi bấm
+  const checkHtml = isOther
+    ? `<input type="checkbox" class="task-check task-check-readonly" ${done ? 'checked' : ''} title="Công việc của ${state.esc(state.shortName(t.assignee))} · Chỉ người nhận việc mới có quyền cập nhật tiến độ" onclick="event.stopPropagation(); window.app.notifyNotTaskOwner('${t.id}')">`
+    : `<input type="checkbox" class="task-check" ${done ? 'checked' : ''} onclick="event.stopPropagation(); window.app.toggleDone('${t.id}')">`;
+
+  // Huy hiệu chỉ xem nếu là task của người khác
+  const lockBadge = isOther
+    ? `<span class="badge b-gray task-readonly-badge" title="Công việc của ${state.esc(state.shortName(t.assignee))} (Chỉ xem)">🔒 Chỉ xem</span>`
+    : '';
+
   return `
-    <div class="task ${state.dueState(t)} ${done ? 'done' : ''}" data-id="${t.id}" onclick="window.app.openTaskModal('${t.id}')">
-      ${canDrag ? '<span class="handle" onclick="event.stopPropagation()" title="Kéo để sắp xếp">⋮⋮</span>' : ''}
+    <div class="task ${state.dueState(t)} ${done ? 'done' : ''} ${isOther ? 'task-readonly-item' : ''}" data-id="${t.id}" onclick="window.app.openTaskModal('${t.id}')">
+      ${canDrag && canEdit ? '<span class="handle" onclick="event.stopPropagation()" title="Kéo để sắp xếp">⋮⋮</span>' : ''}
       <span class="task-code">${state.CODE[t.id] || ''}</span>
-      <input type="checkbox" class="task-check" ${done ? 'checked' : ''} onclick="event.stopPropagation();window.app.toggleDone('${t.id}')">
+      ${checkHtml}
       <span class="task-title">
         ${t.priority === 'high' ? '<span class="task-priority-hi" title="Ưu tiên cao">!</span>' : ''}
         ${state.esc(t.title)}
@@ -145,6 +158,7 @@ function taskItemHtml(t, showProjectName, canDrag) {
       <span class="task-meta">
         ${p ? `<span class="badge" style="background:${pc}22;color:${pc};border-color:${pc}44">${state.esc(p.name)}</span>` : ''}
         ${who}
+        ${lockBadge}
         <span class="due">${state.dueLabel(t)}</span>
         ${nFiles ? `<span class="small" title="${nFiles} tệp đính kèm">📎${nFiles}</span>` : ''}
         ${t.note ? '<span class="small" title="Có ghi chú">📝</span>' : ''}
@@ -266,5 +280,5 @@ function setupSortables(enable) {
 }
 
 function apiUserEmail() {
-  return String(localStorage.getItem('wm.userEmail') || '').toLowerCase();
+  return String(api.userEmail || localStorage.getItem('wm.userEmail') || '').toLowerCase();
 }

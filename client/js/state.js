@@ -228,6 +228,20 @@ export class StateManager {
     });
   }
 
+  canModifyTask(t) {
+    if (!t) return true; // Công việc mới đang được tạo
+    if (!t.assignee) return true; // Chưa giao cho ai -> Cho phép phân công / chỉnh sửa
+    const u = api.currentUser;
+    if (!u) return false;
+
+    const lowerAssignee = String(t.assignee).trim().toLowerCase();
+    const myEmail = String(u.email || '').trim().toLowerCase();
+    const myUsername = String(u.username || '').trim().toLowerCase();
+    const myId = String(u.id || '').trim().toLowerCase();
+
+    return lowerAssignee === myEmail || lowerAssignee === myUsername || lowerAssignee === myId;
+  }
+
   // Optimistic UI & Sync Queue
   upsertLocal(type, rec) {
     const typeKey = type + 's';
@@ -250,6 +264,20 @@ export class StateManager {
   }
 
   commitMany(type, recs) {
+    // Không cho phép can thiệp hoặc thay đổi task của người khác
+    if (type === 'task') {
+      recs = recs.filter(r => {
+        if (!r.id) return true;
+        const existing = this.taskById(r.id);
+        if (existing && existing.assignee && !this.canModifyTask(existing)) {
+          console.warn(`[State] Chặn can thiệp vào công việc "${existing.title}" được giao cho ${existing.assignee}`);
+          return false;
+        }
+        return true;
+      });
+      if (!recs.length) return false;
+    }
+
     const now = Date.now();
     const userIdentifier = api.currentUser ? (api.currentUser.username || api.currentUser.email) : 'admin';
     recs.forEach(r => {

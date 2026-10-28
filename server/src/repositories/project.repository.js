@@ -32,7 +32,10 @@ export const projectRepository = {
       const allowedProjIds = new Set((data.projectPermissions || []).filter(pp => pp.userId === userId).map(pp => pp.projectId));
       list = list.filter(p => allowedProjIds.has(p.id));
     }
-    return list.sort((a, b) => String(a.name || '').localeCompare(String(b.name || ''), 'vi'));
+    return list.map(p => {
+      const perms = (data.projectPermissions || []).filter(pp => pp.projectId === p.id);
+      return { ...p, projectPermissions: perms };
+    }).sort((a, b) => String(a.name || '').localeCompare(String(b.name || ''), 'vi'));
   },
 
   async findById(id) {

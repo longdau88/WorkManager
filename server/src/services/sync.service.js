@@ -52,6 +52,10 @@ export const syncService = {
 
   async applySyncOps(ops = [], user = null) {
     const userEmail = user?.email || 'admin@workmanager.local';
+    const userEmailLower = String(userEmail).trim().toLowerCase();
+    const userUsername = user?.username ? String(user.username).trim().toLowerCase() : '';
+    const userId = user?.id ? String(user.id).trim().toLowerCase() : '';
+
     for (const op of ops) {
       const { type, record } = op;
       if (!record || !record.id) continue;
@@ -62,9 +66,21 @@ export const syncService = {
         case 'project':
           await projectRepository.upsert(record);
           break;
-        case 'task':
+        case 'task': {
+          if (record.id) {
+            const existing = await taskRepository.findById(record.id);
+            if (existing && existing.assignee && user) {
+              const targetAssignee = String(existing.assignee).trim().toLowerCase();
+              const isOwner = targetAssignee === userEmailLower || targetAssignee === userUsername || targetAssignee === userId;
+              if (!isOwner) {
+                console.warn(`[Sync] Blocked unauthorized edit on task ${record.id} assigned to ${existing.assignee} by ${user?.username}`);
+                break; // Skip applying this modification
+              }
+            }
+          }
           await taskRepository.upsert(record);
           break;
+        }
         case 'field':
           await fieldRepository.upsert(record);
           break;

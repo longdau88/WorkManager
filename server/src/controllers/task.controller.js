@@ -29,8 +29,7 @@ export const taskController = {
 
   async create(req, res, next) {
     try {
-      const userEmail = req.headers['x-user-email'] || 'admin@workmanager.local';
-      const data = await taskService.saveTask(req.body, userEmail);
+      const data = await taskService.saveTask(req.body, req.user);
       res.status(201).json({
         status: 'success',
         message: 'Tạo công việc mới thành công',
@@ -43,8 +42,7 @@ export const taskController = {
 
   async update(req, res, next) {
     try {
-      const userEmail = req.headers['x-user-email'] || 'admin@workmanager.local';
-      const data = await taskService.saveTask({ ...req.body, id: req.params.id }, userEmail);
+      const data = await taskService.saveTask({ ...req.body, id: req.params.id }, req.user);
       res.json({
         status: 'success',
         message: 'Cập nhật công việc thành công',
@@ -57,8 +55,7 @@ export const taskController = {
 
   async delete(req, res, next) {
     try {
-      const userEmail = req.headers['x-user-email'] || 'admin@workmanager.local';
-      await taskService.deleteTask(req.params.id, userEmail);
+      await taskService.deleteTask(req.params.id, req.user);
       res.json({
         status: 'success',
         message: 'Xoá công việc thành công',
