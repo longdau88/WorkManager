@@ -107,7 +107,10 @@
           <h2 id="taskModalTitle" style="margin:0;font-size:18px;display:inline-block">Công việc</h2>
           <span id="taskModalBadgeContainer"></span>
         </div>
-        <button type="button" class="ibtn modal-close-corner-btn" onclick="window.app.closeTaskModal()" title="Đóng">✕</button>
+        <div style="display:flex;align-items:center;gap:6px">
+          <button type="button" class="btn small-btn btn-view-updates-header" id="btnTaskModalViewUpdates" onclick="window.app.openTaskUpdatesModal(window.app.getCurrentTaskId())" title="Xem tổng hợp thông tin tiến độ, ghi chú, ảnh và tệp do thành viên làm việc cập nhật">📊 Báo cáo thành viên</button>
+          <button type="button" class="ibtn modal-close-corner-btn" onclick="window.app.closeTaskModal()" title="Đóng">✕</button>
+        </div>
       </div>
 
       <!-- Thông báo khi ở Chế độ Chỉ xem (không thể can thiệp vào task của người khác) -->
@@ -319,6 +322,86 @@
       </div>
       <div class="lightbox-body">
         <img id="lightboxImg" src="" alt="Hình ảnh phóng to" class="lightbox-img">
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= MODAL: TASK UPDATES (XEM BÁO CÁO & CẬP NHẬT TỪ THÀNH VIÊN) ================= -->
+  <div class="modal-bg" id="modalTaskUpdates" onclick="if(event.target===this)window.app.closeTaskUpdatesModal()">
+    <div class="modal modal-task-updates-container" role="dialog" aria-labelledby="taskUpdatesModalTitle">
+      <div class="task-modal-header-top">
+        <div class="task-modal-title-wrap">
+          <span class="badge b-blue" style="font-size:12px">📊 Báo cáo tiến độ</span>
+          <h2 id="taskUpdatesModalTitle" style="margin:0;font-size:18px;display:inline-block">Cập nhật công việc</h2>
+        </div>
+        <button type="button" class="ibtn modal-close-corner-btn" onclick="window.app.closeTaskUpdatesModal()" title="Đóng">✕</button>
+      </div>
+
+      <!-- Quick Meta Pill Bar -->
+      <div id="tu_meta_bar" class="task-quick-info-bar" style="margin-top:10px"></div>
+
+      <!-- 1. Thành viên đang thực hiện -->
+      <div class="task-section-box">
+        <div class="task-section-header">
+          <span class="task-section-title">👥 <b>Thành viên đang thực hiện công việc</b></span>
+        </div>
+        <div id="tu_assignees_list" class="tu-assignees-wrap"></div>
+      </div>
+
+      <!-- 2. Tiến độ hoàn thành (%) & Checklist -->
+      <div class="detailed-progress-card" style="margin-top:10px;margin-bottom:10px">
+        <div class="detailed-progress-header">
+          <div class="prog-badge-wrap">
+            <span class="prog-large-val" id="tu_progress_val">0%</span>
+            <span class="prog-status-tag" id="tu_status_tag">Chưa bắt đầu</span>
+          </div>
+          <div class="prog-summary-text" id="tu_summary_text">0/0 bước checklist hoàn thành</div>
+          <span id="tu_due_badge" class="badge b-gray" style="font-size:11px"></span>
+        </div>
+        <div class="prog-bar-lg">
+          <div class="prog-bar-lg-fill" id="tu_progress_bar_fill" style="width:0%"></div>
+        </div>
+
+        <div class="checklist-box" style="margin-top:12px">
+          <div class="checklist-header">
+            <span class="checklist-title">📋 <b>Checklist các bước đã thực hiện</b> <span id="tu_checklist_count" class="badge b-gray" style="font-size:11px">0/0</span></span>
+          </div>
+          <div id="tu_checklist_list" class="checklist-items-list"></div>
+        </div>
+      </div>
+
+      <!-- 3. Nội dung & Ghi chú thành viên đã cập nhật -->
+      <div class="task-section-box">
+        <div class="task-section-header">
+          <span class="task-section-title">📝 <b>Nội dung / Ghi chú báo cáo từ người làm việc</b></span>
+        </div>
+        <div id="tu_note_box" class="task-note-view-box"></div>
+      </div>
+
+      <!-- 4. Hình ảnh thành viên đã tải lên -->
+      <div class="task-section-box">
+        <div class="task-section-header">
+          <span class="task-section-title">🖼️ <b>Hình ảnh hiện trường & kết quả tải lên</b> <span id="tu_images_count" class="badge b-blue" style="font-size:11px">0 ảnh</span></span>
+          <span class="small" style="color:var(--text-muted)">Bấm vào ảnh để xem phóng to</span>
+        </div>
+        <div id="tu_images_gallery" class="task-gallery-grid"></div>
+      </div>
+
+      <!-- 5. Tài liệu & Tệp đính kèm -->
+      <div class="task-section-box">
+        <div class="task-section-header">
+          <span class="task-section-title">📁 <b>Tài liệu & Tệp đính kèm</b> <span id="tu_docs_count" class="badge b-gray" style="font-size:11px">0 tệp</span></span>
+        </div>
+        <div id="tu_docs_list" class="task-docs-list"></div>
+      </div>
+
+      <!-- Footer Info -->
+      <div id="tu_footer_info" style="font-size:11px;color:var(--text-muted);margin-top:8px;text-align:right"></div>
+
+      <div class="modal-actions" style="margin-top:14px">
+        <span style="flex:1"></span>
+        <button type="button" class="btn" onclick="window.app.closeTaskUpdatesModal()">Đóng</button>
+        <button type="button" id="tu_btn_go_edit" class="btn primary" onclick="window.app.onTaskUpdatesGoEdit()" style="display:none">✏️ Cập nhật tiến độ</button>
       </div>
     </div>
   </div>

@@ -357,52 +357,30 @@ export class StateManager {
   }
 
   // Quyền hoàn thành task: Người được giao việc HOẶC Admin
+  // Quyền hoàn thành và cập nhật tiến độ (thanh kéo %, tick checklist, trạng thái, ghi chú, ảnh, tệp):
+  // Admin HOẶC Thành viên được giao trong task đó!
   canCompleteTask(t, u = api.currentUser) {
     if (!t) return true;
     if (!u) return false;
-    if (u.isAdmin || u.roleName === 'admin' || (u.permissions || []).includes('edit_all_projects')) {
-      return true;
-    }
+    if (this.canEditTask(t, u)) return true;
     return this.isTaskAssignee(t, u);
   }
 
-  // Quyền sửa nội dung task (tiêu đề, hạn, mức ưu tiên, hạng mục, thêm bớt người nhận)
+  // Trong task: CHỈ ADMIN mới có quyền edit task (tiêu đề, hạn, mức ưu tiên, hạng mục, dự án, phân công người nhận)
   canEditTask(t, u = api.currentUser) {
-    if (!t) return true; // Công việc mới
     if (!u) return false;
-    if (u.isAdmin || u.roleName === 'admin' || (u.permissions || []).includes('edit_all_projects')) {
-      return true;
-    }
-    const myEmail = String(u.email || '').trim().toLowerCase();
-    if (t.assigner && String(t.assigner).trim().toLowerCase() === myEmail) {
-      return true;
-    }
-    const perm = (u.projectPermissions || []).find(p => p.projectId === t.projectId);
-    if (perm && (perm.access === 'owner' || perm.access === 'editor')) {
-      return true;
-    }
-    if (!t.assignee) return true;
-    return false;
+    return Boolean(u.isAdmin || u.roleName === 'admin' || (u.permissions || []).includes('edit_all_projects'));
   }
 
-  // Quyền xóa task: Admin, Assigner hoặc Project Owner
+  // Quyền xóa task: CHỈ ADMIN
   canDeleteTask(t, u = api.currentUser) {
-    if (!t) return false;
     if (!u) return false;
-    if (u.isAdmin || u.roleName === 'admin' || (u.permissions || []).includes('edit_all_projects')) {
-      return true;
-    }
-    const myEmail = String(u.email || '').trim().toLowerCase();
-    if (t.assigner && String(t.assigner).trim().toLowerCase() === myEmail) {
-      return true;
-    }
-    const perm = (u.projectPermissions || []).find(p => p.projectId === t.projectId);
-    return Boolean(perm && perm.access === 'owner');
+    return Boolean(u.isAdmin || u.roleName === 'admin' || (u.permissions || []).includes('edit_all_projects'));
   }
 
-  // Quyền cập nhật tiến độ (thanh kéo %, tick checklist, trạng thái): Người được giao việc HOẶC Admin HOẶC Assigner
+  // Quyền cập nhật tiến độ, nội dung, ghi chú, ảnh, tệp đính kèm: Thành viên được giao việc HOẶC Admin
   canUpdateProgress(t, u = api.currentUser) {
-    return this.canCompleteTask(t, u) || this.canEditTask(t, u);
+    return this.canCompleteTask(t, u);
   }
 
   // Quyền can thiệp bất kỳ vào task

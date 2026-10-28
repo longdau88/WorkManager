@@ -178,6 +178,9 @@ function taskItemHtml(t, showProjectName, canDrag) {
         ${nFiles ? `<span class="small" title="${nFiles} tệp đính kèm">📎${nFiles}</span>` : ''}
         ${t.note ? '<span class="small" title="Có ghi chú">📝</span>' : ''}
         ${pgHtml}
+        <button type="button" class="btn-task-updates" onclick="event.stopPropagation(); window.app.openTaskUpdatesModal('${t.id}')" title="Xem tiến độ, ghi chú, ảnh và tệp do thành viên làm việc cập nhật">
+          📊 Xem cập nhật
+        </button>
       </span>
     </div>
   `;

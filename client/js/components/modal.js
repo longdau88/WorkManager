@@ -3,6 +3,7 @@ import { CONFIG } from '../config.js';
 import { api } from '../api.js';
 
 let editTaskId = null;
+let currentUpdatesTaskId = null;
 let editProjId = null;
 let editMemberId = null;
 let selColor = CONFIG.DEFAULT_COLOR;
@@ -205,17 +206,17 @@ export const modals = {
         noticeEl.innerHTML = `
           <div class="readonly-icon">👁️</div>
           <div class="readonly-text">
-            <b>Chế độ xem chi tiết tiến độ (Chỉ xem)</b>
-            <div class="readonly-sub">Công việc này được giao cho: <b>${state.esc(assigneesStr)}</b>. Bạn có thể theo dõi tiến độ chi tiết và danh sách checklist, nhưng <u>không thể chỉnh sửa</u> hoặc can thiệp vào công việc của người khác.</div>
+            <b>Chế độ xem thông tin công việc (Chỉ xem)</b>
+            <div class="readonly-sub">Công việc này được giao cho: <b>${state.esc(assigneesStr)}</b>. Bạn có thể theo dõi tiến độ chi tiết, ghi chú, hình ảnh và tệp đính kèm do người thực hiện tải lên.</div>
           </div>
         `;
         noticeEl.style.display = 'flex';
       } else if (t && canUserCompleteTask && !canUserEditTask) {
         noticeEl.innerHTML = `
-          <div class="readonly-icon" style="color:var(--pri-500)">📋</div>
+          <div class="readonly-icon" style="color:var(--pri-500)">✓</div>
           <div class="readonly-text">
             <b>Bạn là thành viên được giao thực hiện công việc này</b>
-            <div class="readonly-sub">Bạn có quyền đánh dấu hoàn thành các bước checklist, điều chỉnh tỷ lệ hoàn thành (%) và đánh dấu hoàn tất công việc.</div>
+            <div class="readonly-sub">Bạn có thể cập nhật tiến độ (%), đánh dấu checklist các bước đã làm, cập nhật nội dung/ghi chú báo cáo, và tải ảnh/tệp đính kèm lên task. (Chỉ Quản trị viên mới có quyền cấu hình dự án, hạng mục, tên việc, phân công và ngày hạn).</div>
           </div>
         `;
         noticeEl.style.display = 'flex';
@@ -226,7 +227,7 @@ export const modals = {
     }
 
     // Toggle disabled state on inputs based on granular permissions
-    // 1. Structure / Info inputs: only editable if canUserEditTask
+    // 1. Structure / Info inputs: only editable if canUserEditTask (Admin)
     const structureInputIds = ['t_title', 't_project', 't_folder', 't_assigner', 't_priority', 't_start', 't_due'];
     structureInputIds.forEach(fid => {
       const el = document.getElementById(fid);
@@ -264,9 +265,18 @@ export const modals = {
 
     // Save button: visible if user can edit or complete/update progress
     const btnSaveTaskEl = document.getElementById('btnSaveTask');
-    if (btnSaveTaskEl) btnSaveTaskEl.style.display = canTouchProgress ? '' : 'none';
+    if (btnSaveTaskEl) {
+      btnSaveTaskEl.style.display = canTouchProgress ? '' : 'none';
+      btnSaveTaskEl.textContent = canUserEditTask ? '💾 Lưu công việc' : '💾 Lưu cập nhật tiến độ';
+    }
 
-    // Delete button: visible only if canUserDeleteTask
+    // View Updates button in modal header
+    const btnViewUpdatesEl = document.getElementById('btnTaskModalViewUpdates');
+    if (btnViewUpdatesEl) {
+      btnViewUpdatesEl.style.display = t ? 'inline-flex' : 'none';
+    }
+
+    // Delete button: visible only if canUserDeleteTask (Admin)
     const btnDeleteTaskEl = document.getElementById('btnDeleteTask');
     if (btnDeleteTaskEl) btnDeleteTaskEl.style.display = (t && canUserDeleteTask) ? '' : 'none';
 
@@ -286,9 +296,9 @@ export const modals = {
         if (isCurrentTaskReadOnly) {
           badge = '<span class="badge b-gray" style="font-size:11px;margin-left:6px;vertical-align:middle">👁️ Chỉ xem</span>';
         } else if (canUserEditTask) {
-          badge = '<span class="badge b-blue" style="font-size:11px;margin-left:6px;vertical-align:middle">✏️ Có quyền sửa</span>';
+          badge = '<span class="badge b-blue" style="font-size:11px;margin-left:6px;vertical-align:middle">✏️ Quản trị viên (Toàn quyền sửa)</span>';
         } else if (canUserCompleteTask) {
-          badge = '<span class="badge b-green" style="font-size:11px;margin-left:6px;vertical-align:middle">✓ Người thực hiện</span>';
+          badge = '<span class="badge b-green" style="font-size:11px;margin-left:6px;vertical-align:middle">✓ Người thực hiện (Cập nhật tiến độ)</span>';
         }
         badgeContainerEl.innerHTML = badge;
       }
@@ -504,7 +514,7 @@ export const modals = {
           <div class="checklist-item ${c.done ? 'done' : ''}">
             <input type="checkbox" id="chk_item_${i}" class="checklist-item-check" ${c.done ? 'checked' : ''} ${!canTouch ? 'disabled' : ''} onchange="window.app.toggleChecklistItem(${i})">
             <label for="chk_item_${i}" class="checklist-item-title ${c.done ? 'strikethrough' : ''}">${state.esc(c.title)}</label>
-            ${canUserEditTask ? `<button type="button" class="ibtn checklist-del-btn" title="Xóa bước này" onclick="window.app.removeChecklistItem(${i})">✕</button>` : ''}
+            ${canTouch ? `<button type="button" class="ibtn checklist-del-btn" title="Xóa bước này" onclick="window.app.removeChecklistItem(${i})">✕</button>` : ''}
           </div>
         `).join('');
       }
@@ -585,7 +595,8 @@ export const modals = {
   },
 
   removeChecklistItem(index) {
-    if (!canUserEditTask) return;
+    const canTouch = canUserCompleteTask || canUserEditTask;
+    if (!canTouch) return;
     if (index < 0 || index >= draftChecklist.length) return;
     draftChecklist.splice(index, 1);
 
@@ -853,6 +864,286 @@ export const modals = {
     input.value = '';
     if (!files.length) return;
     await this.handleTaskFilesList(files);
+  },
+
+  getCurrentTaskId() {
+    return editTaskId || currentUpdatesTaskId;
+  },
+
+  // ================= TASK UPDATES MODAL (DÀNH CHO MỌI THÀNH VIÊN DỰ ÁN) =================
+  openTaskUpdates(id) {
+    const t = state.taskById(id);
+    if (!t) return;
+    currentUpdatesTaskId = id;
+
+    // 1. Header Title & Code
+    const titleEl = document.getElementById('taskUpdatesModalTitle');
+    const code = state.CODE[t.id] || '';
+    if (titleEl) {
+      titleEl.innerHTML = (code ? `<span class="badge b-blue" style="font-size:12px;margin-right:6px">${code}</span>` : '') + state.esc(t.title || 'Công việc');
+    }
+
+    // 2. Meta Bar (Project, Folder, Dates)
+    const p = state.projById(t.projectId);
+    const fs = p ? (p.folders || []) : [];
+    const curFld = fs.find(f => f.id === t.folderId);
+    const metaBarEl = document.getElementById('tu_meta_bar');
+    if (metaBarEl) {
+      const pc = p ? p.color : 'var(--pri-500)';
+      metaBarEl.innerHTML = `
+        <div class="quick-info-pill">
+          <span class="quick-info-label">DỰ ÁN:</span>
+          <span class="quick-info-value" style="color:${pc};font-weight:600">${state.esc(p ? p.name : 'Chưa thuộc dự án')}</span>
+        </div>
+        <div class="quick-info-pill">
+          <span class="quick-info-label">HẠNG MỤC:</span>
+          <span class="quick-info-value">${state.esc(curFld ? curFld.name : 'Chưa phân loại')}</span>
+        </div>
+        ${t.startDate ? `
+          <div class="quick-info-pill">
+            <span class="quick-info-label">BẮT ĐẦU:</span>
+            <span class="quick-info-value">${state.fmtDate(t.startDate)}</span>
+          </div>
+        ` : ''}
+        ${t.dueDate ? `
+          <div class="quick-info-pill">
+            <span class="quick-info-label">HẠN CHÓT:</span>
+            <span class="quick-info-value">${state.fmtDate(t.dueDate)}</span>
+          </div>
+        ` : ''}
+      `;
+    }
+
+    // 3. Assignees List
+    const assignees = state.getAssignees(t);
+    const assigneesListEl = document.getElementById('tu_assignees_list');
+    if (assigneesListEl) {
+      if (!assignees.length) {
+        assigneesListEl.innerHTML = '<span class="small" style="color:var(--text-muted);font-style:italic">Chưa có người nhận việc cụ thể (Công việc chung của dự án).</span>';
+      } else {
+        assigneesListEl.innerHTML = assignees.map(email => {
+          const u = state.memberBy(email);
+          const fullName = u ? (u.fullName || u.name) : state.shortName(email);
+          const unit = u && u.unit ? u.unit : '';
+          const initials = (fullName || email).split(' ').filter(Boolean).map(w => w[0]).slice(-2).join('').toUpperCase() || 'U';
+          const avatarUrl = u && u.avatar ? u.avatar : '';
+          return `
+            <div class="tu-assignee-card">
+              <div class="tu-assignee-avatar" title="${state.esc(fullName)}">
+                ${avatarUrl ? `<img src="${state.esc(avatarUrl)}" alt="${state.esc(fullName)}">` : initials}
+              </div>
+              <div class="tu-assignee-info">
+                <div class="tu-assignee-name">${state.esc(fullName)}</div>
+                <div class="tu-assignee-sub">${state.esc(unit || email)}</div>
+              </div>
+              <span class="badge b-green" style="font-size:10px;margin-left:auto">Đang thực hiện</span>
+            </div>
+          `;
+        }).join('');
+      }
+    }
+
+    // 4. Progress (%) & Checklist
+    const prog = state.prog(t);
+    const progValEl = document.getElementById('tu_progress_val');
+    if (progValEl) progValEl.textContent = `${prog}%`;
+
+    const statusTagEl = document.getElementById('tu_status_tag');
+    if (statusTagEl) {
+      if (t.status === 'done' || prog === 100) {
+        statusTagEl.textContent = '✓ Đã hoàn thành';
+        statusTagEl.className = 'prog-status-tag tag-done';
+      } else if (prog > 0 || t.status === 'doing') {
+        statusTagEl.textContent = '⚡ Đang thực hiện';
+        statusTagEl.className = 'prog-status-tag tag-doing';
+      } else {
+        statusTagEl.textContent = '⏳ Chưa làm';
+        statusTagEl.className = 'prog-status-tag tag-todo';
+      }
+    }
+
+    const progBarFillEl = document.getElementById('tu_progress_bar_fill');
+    if (progBarFillEl) {
+      progBarFillEl.style.width = `${prog}%`;
+      if (prog === 100) {
+        progBarFillEl.style.background = 'linear-gradient(90deg, #10b981, #059669)';
+      } else if (prog > 50) {
+        progBarFillEl.style.background = 'linear-gradient(90deg, #3b82f6, #10b981)';
+      } else {
+        progBarFillEl.style.background = 'linear-gradient(90deg, #6366f1, #3b82f6)';
+      }
+    }
+
+    // Checklist
+    const checklist = Array.isArray(t.checklist) ? t.checklist : [];
+    const chkDone = checklist.filter(c => c.done).length;
+    const chkTotal = checklist.length;
+
+    const summaryTextEl = document.getElementById('tu_summary_text');
+    if (summaryTextEl) {
+      summaryTextEl.textContent = chkTotal > 0
+        ? `${chkDone}/${chkTotal} bước checklist hoàn thành`
+        : (prog === 100 ? 'Công việc đã hoàn tất 100%' : `Tiến độ hiện tại đạt ${prog}%`);
+    }
+
+    const dueBadgeEl = document.getElementById('tu_due_badge');
+    if (dueBadgeEl) {
+      if (t.dueDate) {
+        const days = state.dueDays(t.dueDate);
+        if (t.status === 'done') {
+          dueBadgeEl.textContent = '✓ Hoàn thành đúng hạn';
+          dueBadgeEl.className = 'badge b-green';
+        } else if (days < 0) {
+          dueBadgeEl.textContent = `⚠️ Quá hạn ${Math.abs(days)} ngày`;
+          dueBadgeEl.className = 'badge b-red';
+        } else if (days === 0) {
+          dueBadgeEl.textContent = '⚡ Hạn hôm nay!';
+          dueBadgeEl.className = 'badge b-orange';
+        } else {
+          dueBadgeEl.textContent = `⏳ Còn ${days} ngày (Hạn: ${state.fmtDate(t.dueDate)})`;
+          dueBadgeEl.className = 'badge b-blue';
+        }
+        dueBadgeEl.style.display = 'inline-block';
+      } else {
+        dueBadgeEl.style.display = 'none';
+      }
+    }
+
+    const chkCountEl = document.getElementById('tu_checklist_count');
+    if (chkCountEl) {
+      chkCountEl.textContent = `${chkDone}/${chkTotal}`;
+      chkCountEl.className = `badge ${chkTotal > 0 && chkDone === chkTotal ? 'b-green' : 'b-gray'}`;
+    }
+
+    const chkListEl = document.getElementById('tu_checklist_list');
+    if (chkListEl) {
+      if (!chkTotal) {
+        chkListEl.innerHTML = '<div class="checklist-empty">Chưa có checklist các bước thực hiện.</div>';
+      } else {
+        chkListEl.innerHTML = checklist.map(c => `
+          <div class="checklist-item ${c.done ? 'done' : ''}">
+            <span class="tu-chk-icon">${c.done ? '✅' : '⬜'}</span>
+            <span class="checklist-item-title ${c.done ? 'strikethrough' : ''}">${state.esc(c.title)}</span>
+          </div>
+        `).join('');
+      }
+    }
+
+    // 5. Note / Report Content
+    const noteBoxEl = document.getElementById('tu_note_box');
+    if (noteBoxEl) {
+      if (t.note && t.note.trim()) {
+        noteBoxEl.innerHTML = state.esc(t.note.trim()).replace(/\n/g, '<br>');
+      } else {
+        noteBoxEl.innerHTML = '<span class="note-empty-state">📝 Chưa có nội dung/ghi chú báo cáo nào từ người thực hiện.</span>';
+      }
+    }
+
+    // 6. Files & Images
+    const files = Array.isArray(t.files) ? t.files : [];
+    const images = files.filter(isImageFile);
+    const docs = files.filter(f => !isImageFile(f));
+
+    const imgCountEl = document.getElementById('tu_images_count');
+    if (imgCountEl) imgCountEl.textContent = `${images.length} ảnh`;
+
+    const imgGalleryEl = document.getElementById('tu_images_gallery');
+    if (imgGalleryEl) {
+      if (!images.length) {
+        imgGalleryEl.innerHTML = '<div class="gallery-empty-state">🖼️ Chưa có hình ảnh nào được tải lên.</div>';
+      } else {
+        imgGalleryEl.innerHTML = images.map(img => `
+          <div class="task-img-card" onclick="window.app.openLightbox('${state.esc(img.url)}', '${state.esc(img.name)}', '${fmtFileSize(img.size)}')">
+            <div class="task-img-thumb-wrap">
+              <img src="${state.esc(img.url)}" alt="${state.esc(img.name)}" loading="lazy">
+              <div class="task-img-overlay">
+                <span class="task-img-zoom-icon" title="Xem phóng to">🔍 Phóng to</span>
+              </div>
+            </div>
+            <div class="task-img-meta">
+              <span class="task-img-name" title="${state.esc(img.name)}">${state.esc(img.name)}</span>
+              <span class="task-img-size">${fmtFileSize(img.size)}</span>
+            </div>
+          </div>
+        `).join('');
+      }
+    }
+
+    const docCountEl = document.getElementById('tu_docs_count');
+    if (docCountEl) docCountEl.textContent = `${docs.length} tệp`;
+
+    const docListEl = document.getElementById('tu_docs_list');
+    if (docListEl) {
+      if (!docs.length) {
+        docListEl.innerHTML = '<div class="small" style="color:var(--text-muted);padding:8px 4px">Chưa có tài liệu đính kèm.</div>';
+      } else {
+        docListEl.innerHTML = docs.map(doc => {
+          const cat = getFileCategory(doc);
+          return `
+            <div class="task-doc-card">
+              <div class="task-doc-icon-badge" style="background:${cat.bg};color:${cat.color}">
+                ${cat.icon}
+              </div>
+              <div class="task-doc-info">
+                <a href="${state.esc(doc.url)}" target="_blank" rel="noopener" class="task-doc-name" title="${state.esc(doc.name)}">
+                  ${state.esc(doc.name)}
+                </a>
+                <div class="task-doc-meta">
+                  <span>${cat.label}</span> • <span>${fmtFileSize(doc.size)}</span>
+                  ${doc.by ? ` • <span>Đăng bởi ${state.shortName(doc.by)}</span>` : ''}
+                </div>
+              </div>
+              <div class="task-doc-actions">
+                <a href="${state.esc(doc.url)}" download="${state.esc(doc.name)}" class="btn small-btn" title="Tải tệp này về máy">⬇️ Tải</a>
+                <a href="${state.esc(doc.url)}" target="_blank" rel="noopener" class="btn small-btn" title="Mở trong tab mới">👁️ Xem</a>
+              </div>
+            </div>
+          `;
+        }).join('');
+      }
+    }
+
+    // 7. Footer Info
+    const footerEl = document.getElementById('tu_footer_info');
+    if (footerEl) {
+      let info = '';
+      if (t.updatedAt) {
+        info += `Cập nhật lần cuối: ${new Date(t.updatedAt).toLocaleString('vi-VN')}`;
+      } else if (t.createdAt) {
+        info += `Tạo lúc: ${new Date(t.createdAt).toLocaleString('vi-VN')}`;
+      }
+      if (t.assigner) {
+        info += ` • Người giao việc: ${state.fullName(t.assigner) || t.assigner}`;
+      }
+      footerEl.textContent = info;
+    }
+
+    // 8. Go to Edit/Update button
+    const btnGoEdit = document.getElementById('tu_btn_go_edit');
+    if (btnGoEdit) {
+      const canTouch = state.canModifyTask(t);
+      if (canTouch) {
+        btnGoEdit.style.display = 'inline-flex';
+        btnGoEdit.textContent = state.canEditTask(t) ? '✏️ Chỉnh sửa công việc' : '✏️ Cập nhật tiến độ';
+      } else {
+        btnGoEdit.style.display = 'none';
+      }
+    }
+
+    openModalEl('modalTaskUpdates');
+  },
+
+  closeTaskUpdates() {
+    closeModalEl('modalTaskUpdates');
+    currentUpdatesTaskId = null;
+  },
+
+  onTaskUpdatesGoEdit() {
+    const id = currentUpdatesTaskId;
+    this.closeTaskUpdates();
+    if (id) {
+      this.openTask(id);
+    }
   },
 
   // ================= PROJECT MODAL =================

@@ -56,18 +56,28 @@ export const taskService = {
     // Kiểm tra quyền chỉnh sửa / hoàn thành task
     if (data.id) {
       const existing = await taskRepository.findById(data.id);
-      if (existing && existing.assignee) {
+      if (existing) {
         const isAdmin = isUserAdmin(user);
         const isAssignee = isUserTaskAssignee(existing, user);
-        const userEmail = (typeof user === 'string' ? user : user.email || '').trim().toLowerCase();
-        const isAssigner = existing.assigner && String(existing.assigner).trim().toLowerCase() === userEmail;
 
-        // Cả người được giao (Assignees) và Admin đều có quyền cập nhật tiến độ / hoàn thành task!
-        // Người giao việc (Assigner) cũng có quyền chỉnh sửa.
-        if (!isAdmin && !isAssignee && !isAssigner) {
-          const err = new Error(`Bạn không có quyền chỉnh sửa công việc này (chỉ người được giao việc hoặc Quản trị viên mới có quyền cập nhật).`);
+        // Trong task: CHỈ ADMIN mới có quyền edit task (cấu hình, phân công, hạn chót, tên việc...).
+        // Thành viên được giao việc (Assignees) chỉ có quyền cập nhật tiến độ, ghi chú, checklist, ảnh, tệp đính kèm.
+        if (!isAdmin && !isAssignee) {
+          const err = new Error('Bạn không có quyền chỉnh sửa công việc này (chỉ người được giao việc mới có quyền cập nhật tiến độ, hoặc Quản trị viên mới có quyền sửa).');
           err.statusCode = 403;
           throw err;
+        }
+
+        // Nếu KHÔNG PHẢI ADMIN (là thành viên được giao làm task), khóa cứng các trường cấu hình của Admin:
+        if (!isAdmin) {
+          data.title = existing.title;
+          data.projectId = existing.projectId;
+          data.folderId = existing.folderId;
+          data.assigner = existing.assigner;
+          data.assignee = existing.assignee;
+          data.startDate = existing.startDate;
+          data.dueDate = existing.dueDate;
+          data.priority = existing.priority;
         }
       }
     }
@@ -129,13 +139,10 @@ export const taskService = {
       throw err;
     }
 
-    // Quyền xóa task: Admin hoặc Assigner (người giao)
+    // Quyền xóa task: CHỈ ADMIN
     const isAdmin = isUserAdmin(user);
-    const userEmail = (typeof user === 'string' ? user : user.email || '').trim().toLowerCase();
-    const isAssigner = existing.assigner && String(existing.assigner).trim().toLowerCase() === userEmail;
-
-    if (!isAdmin && !isAssigner) {
-      const err = new Error('Bạn không có quyền xóa công việc này (chỉ Quản trị viên hoặc người giao việc mới có quyền xóa).');
+    if (!isAdmin) {
+      const err = new Error('Bạn không có quyền xóa công việc này (chỉ Quản trị viên mới có quyền xóa).');
       err.statusCode = 403;
       throw err;
     }

@@ -74,7 +74,7 @@ class App {
     document.addEventListener('keydown', e => {
       if (e.key === 'Escape') {
         [
-          'modalTask', 'modalProject', 'modalSettings', 'modalProjectPermissions', 'modalLightbox',
+          'modalTask', 'modalTaskUpdates', 'modalProject', 'modalSettings', 'modalProjectPermissions', 'modalLightbox',
           'modalDiary', 'modalLedger', 'modalWorker', 'modalAdvance', 'modalContract',
           'modalDevice', 'modalCheck', 'modalIssue', 'modalReceipt', 'modalGuarantee'
         ].forEach(id => closeModalEl(id));
@@ -284,6 +284,12 @@ class App {
   toggleChecklistItem(i) { modals.toggleChecklistItem(i); }
   removeChecklistItem(i) { modals.removeChecklistItem(i); }
   setTaskProgressQuick(val) { modals.setTaskProgressQuick(val); }
+
+  // Task Updates View Delegation (Dành cho mọi thành viên dự án)
+  openTaskUpdatesModal(id) { modals.openTaskUpdates(id); }
+  closeTaskUpdatesModal() { modals.closeTaskUpdates(); }
+  onTaskUpdatesGoEdit() { modals.onTaskUpdatesGoEdit(); }
+  getCurrentTaskId() { return modals.getCurrentTaskId(); }
 
   openProjectModal(id) { modals.openProject(id); }
   closeProjectModal() { closeModalEl('modalProject'); }
