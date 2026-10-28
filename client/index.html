@@ -444,6 +444,23 @@
     </div>
   </div>
 
+  <!-- ================= MODAL: PROJECT PERMISSIONS (PHÂN QUYỀN DỰ ÁN) ================= -->
+  <div class="modal-bg" id="modalProjectPermissions" onclick="if(event.target===this)window.app.closeProjectPermissionsModal()">
+    <div class="modal wide" role="dialog" aria-labelledby="projPermTitle" style="max-width:820px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;border-bottom:1px solid var(--border-light);padding-bottom:10px">
+        <h2 id="projPermTitle" style="margin:0;font-size:var(--font-lg)">🔒 Phân quyền dự án</h2>
+        <button class="ibtn" onclick="window.app.closeProjectPermissionsModal()" title="Đóng">✕</button>
+      </div>
+
+      <div id="projPermTableWrap"></div>
+
+      <div class="modal-actions" style="margin-top:16px">
+        <button class="btn" onclick="window.app.closeProjectPermissionsModal()">Hủy</button>
+        <button class="btn primary" id="btnSaveProjectPerm" onclick="window.app.saveProjectPermissions()">Lưu phân quyền</button>
+      </div>
+    </div>
+  </div>
+
   <!-- ================= MODAL: LOGIN (ĐĂNG NHẬP) ================= -->
   <div class="modal-bg" id="modalLogin" style="z-index:100">
     <div class="modal" role="dialog" aria-labelledby="loginModalTitle" style="max-width:400px;text-align:left">

@@ -1204,9 +1204,10 @@ export const modals = {
   async openProjectPermissions(projectId) {
     curProjectPermId = projectId;
     const project = state.projById(projectId);
-    document.getElementById('projPermTitle').textContent = `🔒 Phân quyền dự án: ${project ? project.name : ''}`;
+    const titleEl = document.getElementById('projPermTitle');
+    if (titleEl) titleEl.textContent = `🔒 Phân quyền dự án: ${project ? project.name : ''}`;
     const wrap = document.getElementById('projPermTableWrap');
-    wrap.innerHTML = '<div class="small" style="padding:16px;text-align:center">⏳ Đang tải danh sách người dùng…</div>';
+    if (wrap) wrap.innerHTML = '<div class="small" style="padding:16px;text-align:center">⏳ Đang tải danh sách người dùng…</div>';
     openModalEl('modalProjectPermissions');
 
     try {
@@ -1214,7 +1215,7 @@ export const modals = {
       cachedProjectPermUsers = data.users || [];
       this.renderProjectPermissionsTable();
     } catch (err) {
-      wrap.innerHTML = `<div class="empty-state">❌ Lỗi: ${state.esc(err.message)}</div>`;
+      if (wrap) wrap.innerHTML = `<div class="empty-state">❌ Lỗi: ${state.esc(err.message)}</div>`;
     }
   },
 

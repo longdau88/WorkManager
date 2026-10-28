@@ -9,30 +9,23 @@ export const syncService = {
     const isAdmin = !user || user.isAdmin || (user.permissions || []).includes('edit_all_projects');
     const userId = user ? user.id : null;
 
-    const [
-      projects, tasks, rawUsers, fields,
-      diary, ledger, categories, workers,
-      labor, advances, contracts, devices,
-      checks, issues, receipts, guarantees, groups
-    ] = await Promise.all([
-      projectRepository.findAll({ includeDeleted: false, userId, isAdmin }),
-      taskRepository.findAll({ includeDeleted: false }),
-      userRepository.findAll(),
-      fieldRepository.findAll({ includeDeleted: false }),
-      v8Repository.findAll('diary'),
-      v8Repository.findAll('ledger'),
-      v8Repository.findAll('category'),
-      v8Repository.findAll('worker'),
-      v8Repository.findAll('labor'),
-      v8Repository.findAll('advance'),
-      v8Repository.findAll('contract'),
-      v8Repository.findAll('device'),
-      v8Repository.findAll('check'),
-      v8Repository.findAll('issue'),
-      v8Repository.findAll('receipt'),
-      v8Repository.findAll('guarantee'),
-      v8Repository.findAll('group')
-    ]);
+    const projects = await projectRepository.findAll({ includeDeleted: false, userId, isAdmin });
+    const tasks = await taskRepository.findAll({ includeDeleted: false });
+    const rawUsers = await userRepository.findAll();
+    const fields = await fieldRepository.findAll({ includeDeleted: false });
+    const diary = await v8Repository.findAll('diary');
+    const ledger = await v8Repository.findAll('ledger');
+    const categories = await v8Repository.findAll('category');
+    const workers = await v8Repository.findAll('worker');
+    const labor = await v8Repository.findAll('labor');
+    const advances = await v8Repository.findAll('advance');
+    const contracts = await v8Repository.findAll('contract');
+    const devices = await v8Repository.findAll('device');
+    const checks = await v8Repository.findAll('check');
+    const issues = await v8Repository.findAll('issue');
+    const receipts = await v8Repository.findAll('receipt');
+    const guarantees = await v8Repository.findAll('guarantee');
+    const groups = await v8Repository.findAll('group');
 
     // Filter tasks if not admin
     const allowedProjectIds = new Set(projects.map(p => p.id));

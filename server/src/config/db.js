@@ -561,19 +561,28 @@ export async function initDatabase() {
 
   dbInitPromise = (async () => {
     try {
-      const dbUrl = env.databaseUrl || process.env.DATABASE_URL;
+      let dbUrl = env.databaseUrl || process.env.DATABASE_URL;
       if (!dbUrl) {
         throw new Error('DATABASE_URL is not set in environment');
       }
 
-      prisma = new PrismaClient({
-        datasources: {
-          db: { url: dbUrl }
-        }
-      });
+      // Giới hạn connection pool cho AlwaysData MySQL (max 3 connections) để tránh lỗi 1203 max_user_connections
+      if (!dbUrl.includes('connection_limit=')) {
+        const sep = dbUrl.includes('?') ? '&' : '?';
+        dbUrl = `${dbUrl}${sep}connection_limit=3&pool_timeout=10`;
+      }
+
+      if (!prisma) {
+        prisma = globalThis.__prismaInstance || new PrismaClient({
+          datasources: {
+            db: { url: dbUrl }
+          }
+        });
+        globalThis.__prismaInstance = prisma;
+      }
       await prisma.$connect();
       isPrismaConnected = true;
-      console.log('✅ Kết nối MySQL thành công qua Prisma (Host: mysql-tlcserver.alwaysdata.net, DB: tlcserver_work_manager)!');
+      console.log('✅ Kết nối MySQL thành công qua Prisma (Host: mysql-tlcserver.alwaysdata.net, DB: tlcserver_work_manager, Pool: 3)!');
       
       // Tự động kiểm tra và khởi tạo dữ liệu ban đầu nếu chưa có data
       await seedInitialDataIfEmpty(prisma);
