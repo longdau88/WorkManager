@@ -53,9 +53,7 @@ class App {
         state.data.notifications = state.data.notifications.slice(0, 100);
       }
       if (type === 'presence') {
-        const index = state.data.presence.findIndex(item => item.userId === payload.userId && item.projectId === payload.projectId);
-        if (index >= 0) state.data.presence[index] = payload;
-        else state.data.presence.push(payload);
+        this.mergePresence(payload);
       }
       state.persist();
       this.updateNotificationCount();
@@ -66,8 +64,11 @@ class App {
 
   startPresence() {
     clearInterval(this.presenceTimer);
-    const heartbeat = () => api.heartbeatPresence(state.curProject === 'all' ? null : state.curProject)
-      .then(() => this.updateOnlineCount())
+    const heartbeat = () => api.heartbeatPresence(null)
+      .then(record => {
+        this.mergePresence(record);
+        this.updateOnlineCount();
+      })
       .catch(() => { });
     heartbeat();
     this.presenceTimer = setInterval(heartbeat, 60000);
@@ -84,6 +85,15 @@ class App {
     const online = state.data.presence.filter(item => new Date(item.lastSeen).getTime() >= cutoff);
     const element = document.getElementById('onlineCount');
     if (element) element.textContent = String(new Set(online.map(item => item.userId)).size);
+  }
+
+  mergePresence(record) {
+    if (!record?.userId) return;
+    const projectId = record.projectId || 'all';
+    const index = state.data.presence.findIndex(item => item.userId === record.userId && (item.projectId || 'all') === projectId);
+    if (index >= 0) state.data.presence[index] = { ...state.data.presence[index], ...record, projectId };
+    else state.data.presence.push({ ...record, projectId });
+    state.persist();
   }
 
   async showNotifications() {
@@ -143,13 +153,19 @@ class App {
   async showOnlineUsers() {
     this.closeHeaderPopovers();
     try {
-      const presence = await api.getPresence(state.curProject === 'all' ? null : state.curProject);
-      state.data.presence = presence || [];
+      const presence = await api.getPresence(null);
+      const cutoff = Date.now() - 120000;
+      const latestByUser = new Map();
+      (presence || []).filter(item => new Date(item.lastSeen).getTime() >= cutoff).forEach(item => {
+        const previous = latestByUser.get(item.userId);
+        if (!previous || new Date(item.lastSeen) > new Date(previous.lastSeen)) latestByUser.set(item.userId, item);
+      });
+      const onlineUsers = [...latestByUser.values()];
+      onlineUsers.forEach(item => this.mergePresence(item));
       this.updateOnlineCount();
       const usersById = new Map((state.data.users || []).map(user => [user.id, user]));
-      const unique = [...new Map(state.data.presence.map(item => [item.userId, item])).values()];
       const list = document.getElementById('onlineUserList');
-      if (list) list.innerHTML = unique.length ? unique.map(item => {
+      if (list) list.innerHTML = onlineUsers.length ? onlineUsers.map(item => {
         const user = usersById.get(item.userId);
         const name = user?.fullName || user?.username || item.userId;
         return `<div class="header-popover-item"><div class="header-popover-item-title"><span style="color:var(--success-main)">●</span> ${state.esc(name)}</div><div class="header-popover-item-meta">Hoạt động ${new Date(item.lastSeen).toLocaleString('vi-VN')}</div></div>`;
@@ -193,6 +209,17 @@ class App {
   }
 
   bindEvents() {
+    document.addEventListener('click', event => {
+      const target = event.target;
+      const notificationPopover = document.getElementById('notificationPopover');
+      const onlinePopover = document.getElementById('onlinePopover');
+      const notificationButton = document.getElementById('btnNotifications');
+      const onlineButton = document.getElementById('btnOnlineUsers');
+      const insidePopover = notificationPopover?.contains(target) || onlinePopover?.contains(target);
+      const onTrigger = notificationButton?.contains(target) || onlineButton?.contains(target);
+      if (!insidePopover && !onTrigger) this.closeHeaderPopovers();
+    });
+
     // Search Input
     const searchInput = document.getElementById('searchTasks');
     if (searchInput) {
@@ -283,6 +310,7 @@ class App {
 
     state.updateSyncUI();
     this.updateNotificationCount();
+    this.updateOnlineCount();
   }
 
   // Navigation

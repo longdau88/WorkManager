@@ -55,6 +55,16 @@ header {
   white-space: nowrap;
 }
 
+.online-dot {
+  width: 7px;
+  height: 7px;
+  display: inline-block;
+  flex: 0 0 7px;
+  border-radius: 50%;
+  background: #16a34a;
+  box-shadow: 0 0 0 2px color-mix(in srgb, #16a34a 16%, transparent);
+}
+
 .header-popover {
   position: fixed;
   top: 62px;
