@@ -24,7 +24,10 @@ const TYPE_TO_MODEL = {
   guarantees: 'guarantee',
   group: 'projectGroup',
   groups: 'projectGroup',
-  pgroup: 'projectGroup'
+  pgroup: 'projectGroup',
+  comment: 'comment',
+  comments: 'comment',
+  audit: 'auditLog'
 };
 
 const TYPE_TO_KEY = {
@@ -51,7 +54,10 @@ const TYPE_TO_KEY = {
   guarantees: 'guarantees',
   group: 'groups',
   groups: 'groups',
-  pgroup: 'groups'
+  pgroup: 'groups',
+  comment: 'comments',
+  comments: 'comments',
+  audit: 'auditLogs'
 };
 
 const MODEL_FIELDS = {
@@ -60,14 +66,15 @@ const MODEL_FIELDS = {
   diary: ['projectId', 'date', 'weatherAM', 'weatherPM', 'folderId', 'area', 'workText', 'tasks', 'quantities', 'labor', 'machines', 'materials', 'safety', 'issues', 'proposals', 'supervisorNote', 'files', 'confirmedBy', 'confirmedAt', 'deleted', 'createdBy', 'updatedBy'],
   ledger: ['projectId', 'date', 'kind', 'categoryId', 'folderId', 'content', 'unit', 'qty', 'price', 'amount', 'person', 'note', 'files', 'status', 'approvedBy', 'approvedAt', 'rejectReason', 'deleted', 'createdBy', 'updatedBy'],
   worker: ['name', 'team', 'job', 'phone', 'payType', 'rate', 'bank', 'note', 'active', 'sort', 'deleted', 'createdBy', 'updatedBy'],
-  labor: ['projectId', 'month', 'workerId', 'days', 'ot', 'rate', 'stdDays', 'allowance', 'bonus', 'deduction', 'note', 'deleted', 'createdBy', 'updatedBy'],
-  advance: ['projectId', 'date', 'workerId', 'amount', 'kind', 'month', 'paidDate', 'note', 'deleted', 'createdBy', 'updatedBy'],
-  contract: ['projectId', 'code', 'name', 'team', 'leader', 'phone', 'workScope', 'amount', 'startDate', 'endDate', 'status', 'items', 'terms', 'files', 'deleted', 'createdBy', 'updatedBy'],
-  device: ['projectId', 'code', 'name', 'type', 'brand', 'model', 'serial', 'owner', 'operator', 'status', 'importDate', 'exportDate', 'expDate', 'files', 'deleted', 'createdBy', 'updatedBy'],
-  check: ['projectId', 'code', 'name', 'date', 'folderId', 'area', 'type', 'inspector', 'contractor', 'supervisor', 'result', 'note', 'files', 'deleted', 'createdBy', 'updatedBy'],
-  issue: ['projectId', 'code', 'title', 'folderId', 'area', 'checkId', 'severity', 'assignee', 'deadline', 'status', 'fixedDate', 'fixer', 'note', 'files', 'deleted', 'createdBy', 'updatedBy'],
-  receipt: ['projectId', 'stage', 'date', 'amount', 'receivedAmount', 'status', 'paidDate', 'note', 'files', 'deleted', 'createdBy', 'updatedBy'],
-  guarantee: ['projectId', 'type', 'bank', 'code', 'amount', 'expDate', 'status', 'note', 'files', 'deleted', 'createdBy', 'updatedBy']
+  labor: ['projectId', 'month', 'workerId', 'days', 'ot', 'rate', 'payType', 'stdDays', 'allowance', 'bonus', 'deduction', 'payNote', 'note', 'deleted', 'createdBy', 'updatedBy'],
+  advance: ['projectId', 'kind', 'refId', 'month', 'date', 'amount', 'method', 'payer', 'note', 'files', 'deleted', 'createdBy', 'updatedBy'],
+  contract: ['projectId', 'team', 'leader', 'phone', 'items', 'note', 'files', 'sort', 'deleted', 'createdBy', 'updatedBy'],
+  device: ['projectId', 'folderId', 'category', 'brand', 'model', 'serial', 'mac', 'ip', 'location', 'installDate', 'installer', 'status', 'acceptDate', 'warrantyEnd', 'note', 'files', 'sort', 'hostname', 'mask', 'gateway', 'vlan', 'switchName', 'switchPort', 'converter', 'pole', 'polePort', 'odfPort', 'statusLog', 'deleted', 'createdBy', 'updatedBy'],
+  check: ['projectId', 'folderId', 'name', 'date', 'participants', 'items', 'conclusion', 'note', 'files', 'deleted', 'createdBy', 'updatedBy'],
+  issue: ['projectId', 'folderId', 'title', 'location', 'severity', 'assignee', 'dueDate', 'status', 'note', 'files', 'fixedAt', 'closedBy', 'deleted', 'createdBy', 'updatedBy'],
+  receipt: ['projectId', 'name', 'plannedDate', 'amount', 'status', 'receivedDate', 'receivedAmount', 'note', 'files', 'deleted', 'createdBy', 'updatedBy'],
+  guarantee: ['projectId', 'gtype', 'bank', 'number', 'amount', 'issueDate', 'expiryDate', 'status', 'note', 'files', 'deleted', 'createdBy', 'updatedBy'],
+  comment: ['taskId', 'projectId', 'text', 'files', 'deleted', 'createdBy', 'updatedBy']
 };
 
 function sanitizeForPrisma(type, r) {
@@ -95,7 +102,7 @@ function sanitizeForPrisma(type, r) {
   if ('deleted' in out) out.deleted = Boolean(out.deleted);
 
   // JSON fields handling
-  const jsonFields = ['tasks', 'quantities', 'labor', 'machines', 'materials', 'files', 'days', 'ot', 'items'];
+  const jsonFields = ['tasks', 'quantities', 'labor', 'machines', 'materials', 'files', 'days', 'ot', 'items', 'statusLog'];
   jsonFields.forEach(f => {
     if (f in out && out[f] !== null && typeof out[f] === 'string') {
       try { out[f] = JSON.parse(out[f]); } catch (_) {}
@@ -170,5 +177,64 @@ export const v8Repository = {
     }
     writeFallbackData(data);
     return record;
+  },
+
+  async findById(type, id) {
+    const model = TYPE_TO_MODEL[type];
+    const key = TYPE_TO_KEY[type];
+    if (!model || !key || !id) return null;
+    if (isPrismaConnected && prisma && prisma[model]) {
+      return await prisma[model].findUnique({ where: { id } });
+    }
+    const data = readFallbackData();
+    return (data[key] || []).find(x => x.id === id) || null;
+  },
+
+  async findAudit({ type = '', recId = '', projectId = '', action = '', limit = 400 } = {}) {
+    const take = Math.min(Number(limit) || 400, 800);
+    if (isPrismaConnected && prisma && prisma.auditLog) {
+      const where = {};
+      if (type) where.type = type;
+      if (recId) where.recId = recId;
+      if (projectId) where.projectId = projectId;
+      if (action) where.action = action;
+      return await prisma.auditLog.findMany({
+        where,
+        orderBy: { at: 'desc' },
+        take
+      });
+    }
+    const data = readFallbackData();
+    if (!Array.isArray(data.auditLogs)) data.auditLogs = [];
+    let list = data.auditLogs.slice();
+    if (type) list = list.filter(r => r.type === type);
+    if (recId) list = list.filter(r => r.recId === recId);
+    if (projectId) list = list.filter(r => r.projectId === projectId);
+    if (action) list = list.filter(r => r.action === action);
+    return list.sort((a, b) => new Date(b.at) - new Date(a.at)).slice(0, take);
+  },
+
+  async appendAudit(row) {
+    const rec = {
+      id: row.id || `aud_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+      at: row.at ? new Date(row.at) : new Date(),
+      user: row.user || '',
+      type: row.type || '',
+      recId: row.recId || '',
+      projectId: row.projectId || null,
+      action: row.action || 'update',
+      title: String(row.title || '').slice(0, 500),
+      before: row.before || '',
+      after: row.after || ''
+    };
+    if (isPrismaConnected && prisma && prisma.auditLog) {
+      return await prisma.auditLog.create({ data: rec });
+    }
+    const data = readFallbackData();
+    if (!Array.isArray(data.auditLogs)) data.auditLogs = [];
+    data.auditLogs.unshift({ ...rec, at: rec.at.toISOString ? rec.at.toISOString() : rec.at });
+    data.auditLogs = data.auditLogs.slice(0, 20000);
+    writeFallbackData(data);
+    return rec;
   }
 };

@@ -18,6 +18,14 @@ model User {
   roleId             String              @db.VarChar(191)
   role               Role                @relation(fields: [roleId], references: [id])
   isActive           Boolean             @default(true)
+  startDate          String?             @db.VarChar(50)
+  dob                String?             @db.VarChar(50)
+  bhxh               String?             @db.VarChar(100)
+  cccd               String?             @db.VarChar(50)
+  cccdDate           String?             @db.VarChar(50)
+  cccdPlace          String?             @db.VarChar(255)
+  address            String?             @db.Text
+  idFiles            Json?
   createdAt          DateTime            @default(now())
   updatedAt          DateTime            @updatedAt
   projectPermissions ProjectPermission[]
@@ -95,6 +103,8 @@ model Task {
   assigner  String?  @db.VarChar(191)
   files     Json?
   checklist Json?
+  color     String?  @db.VarChar(50)
+  doneAt    String?  @db.VarChar(50)
   deleted   Boolean  @default(false)
   updatedBy String?  @db.VarChar(191)
   createdAt DateTime @default(now())
@@ -324,6 +334,17 @@ model Device {
   note        String?  @db.Text
   files       Json?
   sort        Int      @default(10)
+  hostname    String?  @db.VarChar(255)
+  mask        String?  @db.VarChar(100)
+  gateway     String?  @db.VarChar(100)
+  vlan        String?  @db.VarChar(50)
+  switchName  String?  @db.VarChar(255)
+  switchPort  String?  @db.VarChar(50)
+  converter   String?  @db.VarChar(255)
+  pole        String?  @db.VarChar(255)
+  polePort    String?  @db.VarChar(50)
+  odfPort     String?  @db.VarChar(50)
+  statusLog   Json?
   deleted     Boolean  @default(false)
   createdBy   String?  @db.VarChar(191)
   updatedBy   String?  @db.VarChar(191)
@@ -332,6 +353,81 @@ model Device {
 
   @@index([projectId, deleted])
   @@index([serial])
+}
+
+model Comment {
+  id        String   @id @default(cuid()) @db.VarChar(191)
+  taskId    String   @db.VarChar(191)
+  projectId String?  @db.VarChar(191)
+  text      String?  @db.Text
+  files     Json?
+  deleted   Boolean  @default(false)
+  createdBy String?  @db.VarChar(191)
+  updatedBy String?  @db.VarChar(191)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([taskId, deleted])
+  @@index([projectId, deleted])
+}
+
+model AuditLog {
+  id        String   @id @default(cuid()) @db.VarChar(191)
+  at        DateTime @default(now())
+  user      String?  @db.VarChar(191)
+  type      String   @db.VarChar(50)
+  recId     String   @db.VarChar(191)
+  projectId String?  @db.VarChar(191)
+  action    String   @db.VarChar(50)
+  title     String?  @db.VarChar(500)
+  before    String?  @db.LongText
+  after     String?  @db.LongText
+
+  @@index([type, recId])
+  @@index([projectId])
+  @@index([at])
+}
+
+model Notification {
+  id        String   @id @default(cuid()) @db.VarChar(191)
+  userId    String   @db.VarChar(191)
+  type      String   @db.VarChar(50)
+  title     String   @db.VarChar(500)
+  message   String?  @db.Text
+  entityType String? @db.VarChar(50)
+  entityId  String?  @db.VarChar(191)
+  projectId String?  @db.VarChar(191)
+  dueAt     String?  @db.VarChar(50)
+  readAt    DateTime?
+  deliveryKey String @unique @db.VarChar(255)
+  createdAt DateTime @default(now())
+
+  @@index([userId, readAt])
+  @@index([projectId])
+}
+
+model PresenceSession {
+  id        String   @id @default(cuid()) @db.VarChar(191)
+  userId    String   @db.VarChar(191)
+  projectId String?  @db.VarChar(191)
+  lastSeen  DateTime @default(now())
+  createdAt DateTime @default(now())
+
+  @@unique([userId, projectId])
+  @@index([projectId, lastSeen])
+}
+
+model BackupArtifact {
+  id          String   @id @default(cuid()) @db.VarChar(191)
+  filename    String   @db.VarChar(255)
+  path        String?  @db.Text
+  checksum    String   @db.VarChar(128)
+  size        Int      @default(0)
+  status      String   @default("completed") @db.VarChar(50)
+  createdBy   String?  @db.VarChar(191)
+  createdAt   DateTime @default(now())
+
+  @@index([createdAt])
 }
 
 model Check {

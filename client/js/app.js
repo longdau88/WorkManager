@@ -34,12 +34,60 @@ class App {
       // Initial Render & Bootstrap
       this.render();
       state.flush();
+      this.startRealtime();
+      this.presenceTimer = setInterval(() => api.heartbeatPresence(state.curProject === 'all' ? null : state.curProject).catch(() => { }), 60000);
     }
 
     // Periodic Auto-Sync
     setInterval(() => {
       if (api.token) state.flush();
     }, CONFIG.AUTO_SYNC_MS);
+  }
+
+  startRealtime() {
+    if (this.eventSource) this.eventSource.close();
+    this.eventSource = api.connectEvents((type, payload) => {
+      if (type === 'comment') state.upsertLocal('comment', payload);
+      if (type === 'notification') {
+        state.data.notifications.unshift(payload);
+        state.data.notifications = state.data.notifications.slice(0, 100);
+      }
+      if (type === 'presence') {
+        const index = state.data.presence.findIndex(item => item.userId === payload.userId && item.projectId === payload.projectId);
+        if (index >= 0) state.data.presence[index] = payload;
+        else state.data.presence.push(payload);
+      }
+      state.persist();
+      this.updateNotificationCount();
+      state.notify();
+    });
+  }
+
+  updateNotificationCount() {
+    const count = state.data.notifications.filter(item => !item.readAt).length;
+    const element = document.getElementById('notificationCount');
+    if (element) element.textContent = String(count);
+  }
+
+  async showNotifications() {
+    try {
+      const notifications = await api.getNotifications(true);
+      state.data.notifications = notifications || [];
+      state.persist();
+      this.updateNotificationCount();
+      if (!notifications.length) return alert('Không có thông báo mới.');
+      alert(notifications.map(item => `${item.title}\n${item.message || ''}`).join('\n\n'));
+      await api.markNotificationsRead(notifications.map(item => item.id));
+      state.data.notifications.forEach(item => { item.readAt = new Date().toISOString(); });
+      this.updateNotificationCount();
+    } catch (error) {
+      alert(`Không thể tải thông báo: ${error.message}`);
+    }
+  }
+
+  downloadReport(format) {
+    if (!api.token) return this.showLoginModal();
+    window.open(api.reportUrl(format), '_blank', 'noopener');
   }
 
   bindEvents() {
@@ -132,6 +180,7 @@ class App {
     }
 
     state.updateSyncUI();
+    this.updateNotificationCount();
   }
 
   // Navigation
@@ -289,6 +338,7 @@ class App {
   openTaskUpdatesModal(id) { modals.openTaskUpdates(id); }
   closeTaskUpdatesModal() { modals.closeTaskUpdates(); }
   onTaskUpdatesGoEdit() { modals.onTaskUpdatesGoEdit(); }
+  addTaskComment() { modals.addTaskComment(); }
   getCurrentTaskId() { return modals.getCurrentTaskId(); }
 
   openProjectModal(id, focusFieldId) { modals.openProject(id, focusFieldId); }
@@ -352,7 +402,7 @@ class App {
     if (iframe && iframe.contentWindow) {
       try {
         iframe.contentWindow.postMessage({ type: 'NETLAB_SAVE_AND_CLOSE' }, '*');
-      } catch (e) {}
+      } catch (e) { }
     }
 
     setTimeout(() => {
@@ -366,9 +416,9 @@ class App {
 
   toggleNetlabFullscreen() {
     if (!document.fullscreenElement) {
-      document.documentElement.requestFullscreen().catch(() => {});
+      document.documentElement.requestFullscreen().catch(() => { });
     } else {
-      if (document.exitFullscreen) document.exitFullscreen().catch(() => {});
+      if (document.exitFullscreen) document.exitFullscreen().catch(() => { });
     }
   }
   closeProjectModal() { closeModalEl('modalProject'); }

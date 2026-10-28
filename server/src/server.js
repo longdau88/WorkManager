@@ -1,6 +1,7 @@
 import app from './app.js';
 import { env } from './config/env.js';
 import { initDatabase, prisma } from './config/db.js';
+import { startReminderScheduler } from './services/reminder.scheduler.js';
 
 async function startServer() {
   try {
@@ -9,6 +10,7 @@ async function startServer() {
 
     const server = app.listen(env.port, () => {
       console.log('==================================================');
+      startReminderScheduler();
       console.log(`🚀 WorkManager Server đang chạy tại: http://localhost:${env.port}`);
       console.log(`📡 API Base URL: http://localhost:${env.port}/api`);
       console.log(`🌐 Frontend App: http://localhost:${env.port}`);

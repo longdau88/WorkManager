@@ -3,6 +3,8 @@ import { taskRepository } from '../repositories/task.repository.js';
 import { userRepository } from '../repositories/user.repository.js';
 import { fieldRepository } from '../repositories/field.repository.js';
 import { v8Repository } from '../repositories/v8.repository.js';
+import { realtimeService } from './realtime.service.js';
+import { featureRepository } from '../repositories/feature.repository.js';
 
 export const syncService = {
   async getBootstrapData(user = null) {
@@ -13,23 +15,28 @@ export const syncService = {
     const tasks = await taskRepository.findAll({ includeDeleted: false });
     const rawUsers = await userRepository.findAll();
     const fields = await fieldRepository.findAll({ includeDeleted: false });
-    const diary = await v8Repository.findAll('diary');
-    const ledger = await v8Repository.findAll('ledger');
-    const categories = await v8Repository.findAll('category');
-    const workers = await v8Repository.findAll('worker');
-    const labor = await v8Repository.findAll('labor');
-    const advances = await v8Repository.findAll('advance');
-    const contracts = await v8Repository.findAll('contract');
-    const devices = await v8Repository.findAll('device');
-    const checks = await v8Repository.findAll('check');
-    const issues = await v8Repository.findAll('issue');
-    const receipts = await v8Repository.findAll('receipt');
-    const guarantees = await v8Repository.findAll('guarantee');
-    const groups = await v8Repository.findAll('group');
-
-    // Filter tasks if not admin
     const allowedProjectIds = new Set(projects.map(p => p.id));
     const filteredTasks = isAdmin ? tasks : tasks.filter(t => !t.projectId || allowedProjectIds.has(t.projectId));
+    const scopedRecords = type => isAdmin
+      ? v8Repository.findAll(type)
+      : v8Repository.findAll(type).then(records => records.filter(record => !record.projectId || allowedProjectIds.has(record.projectId)));
+
+    const [diary, ledger, categories, workers, labor, advances, contracts, devices, checks, issues, receipts, guarantees, groups, comments] = await Promise.all([
+      scopedRecords('diary'),
+      scopedRecords('ledger'),
+      v8Repository.findAll('category'),
+      v8Repository.findAll('worker'),
+      scopedRecords('labor'),
+      scopedRecords('advance'),
+      scopedRecords('contract'),
+      scopedRecords('device'),
+      scopedRecords('check'),
+      scopedRecords('issue'),
+      scopedRecords('receipt'),
+      scopedRecords('guarantee'),
+      v8Repository.findAll('group'),
+      scopedRecords('comment')
+    ]);
 
     const safeUsers = (rawUsers || []).map(u => ({
       id: u.id,
@@ -42,6 +49,8 @@ export const syncService = {
       role: u.role,
       isActive: u.isActive
     }));
+    const notifications = user ? await featureRepository.listNotifications(user.id, { limit: 100 }) : [];
+    const presence = await featureRepository.listPresence();
 
     return {
       serverTime: Date.now(),
@@ -71,7 +80,10 @@ export const syncService = {
       issues,
       receipts,
       guarantees,
-      groups
+      groups,
+      comments,
+      notifications,
+      presence
     };
   },
 
@@ -85,38 +97,98 @@ export const syncService = {
       'diary', 'ledger', 'category', 'categories', 'worker', 'workers',
       'labor', 'advance', 'advances', 'contract', 'contracts',
       'device', 'devices', 'check', 'checks', 'issue', 'issues',
-      'receipt', 'receipts', 'guarantee', 'guarantees', 'group', 'groups', 'pgroup'
+      'receipt', 'receipts', 'guarantee', 'guarantees', 'group', 'groups', 'pgroup',
+      'comment', 'comments'
+    ]);
+    const isAdmin = !user || user.isAdmin || (user.permissions || []).includes('edit_all_projects');
+    const projects = await projectRepository.findAll({ includeDeleted: false, userId: user?.id || null, isAdmin });
+    const allowedProjectIds = new Set(projects.map(project => project.id));
+    const allowedTaskIds = new Set((await taskRepository.findAll({ includeDeleted: false }))
+      .filter(task => isAdmin || !task.projectId || allowedProjectIds.has(task.projectId))
+      .map(task => task.id));
+    const projectAccess = new Map((user?.projectPermissions || []).map(permission => [permission.projectId, permission.access]));
+    const projectScopedTypes = new Set([
+      'diary', 'ledger', 'labor', 'advance', 'advances', 'contract', 'contracts',
+      'device', 'devices', 'check', 'checks', 'issue', 'issues', 'receipt', 'receipts',
+      'guarantee', 'guarantees', 'comment', 'comments'
     ]);
 
     for (const op of ops) {
       const { type, record } = op;
       if (!record || !record.id) continue;
 
+      if (!isAdmin && type === 'project' && !allowedProjectIds.has(record.id)) {
+        const existingProject = await projectRepository.findById(record.id);
+        if (existingProject) {
+          throw Object.assign(new Error('Bạn không có quyền cập nhật dự án này.'), { status: 403 });
+        }
+      }
+
+      if (!isAdmin && projectScopedTypes.has(type) && record.projectId && !allowedProjectIds.has(record.projectId)) {
+        throw Object.assign(new Error('Bạn không có quyền cập nhật dữ liệu của dự án này.'), { status: 403 });
+      }
+
+      if (!isAdmin && (type === 'comment' || type === 'comments')) {
+        const task = await taskRepository.findById(record.taskId);
+        if (!task || !allowedTaskIds.has(task.id)) {
+          throw Object.assign(new Error('Bạn không có quyền bình luận trong công việc này.'), { status: 403 });
+        }
+        record.projectId = task.projectId || null;
+      } else if (!isAdmin && projectScopedTypes.has(type) && record.projectId && projectAccess.get(record.projectId) === 'viewer') {
+        throw Object.assign(new Error('Bạn chỉ có quyền xem dữ liệu của dự án này.'), { status: 403 });
+      }
+
       record.updatedBy = userEmail;
+      let before = null;
+      let result = null;
 
       if (type === 'project') {
-        await projectRepository.upsert(record);
+        before = await projectRepository.findById(record.id);
+        if (!isAdmin && before && projectAccess.get(record.id) === 'viewer') {
+          throw Object.assign(new Error('Bạn chỉ có quyền xem dự án này.'), { status: 403 });
+        }
+        if (!isAdmin && !before) {
+          throw Object.assign(new Error('Chỉ quản trị viên mới được tạo dự án mới.'), { status: 403 });
+        }
+        result = await projectRepository.upsert(record);
       } else if (type === 'task') {
+        before = await taskRepository.findById(record.id);
         if (record.id) {
-          const existing = await taskRepository.findById(record.id);
-          if (existing && existing.assignee && user) {
+          if (before && before.assignee && user) {
             const isAdmin = Boolean(user.isAdmin || user.roleName === 'admin' || (user.permissions || []).includes('edit_all_projects'));
-            const assignees = String(existing.assignee).split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
+            const assignees = String(before.assignee).split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
             const isAssignee = assignees.some(a => a === userEmailLower || a === userUsername || a === userId);
-            const isAssigner = existing.assigner && String(existing.assigner).trim().toLowerCase() === userEmailLower;
+            const isAssigner = before.assigner && String(before.assigner).trim().toLowerCase() === userEmailLower;
             if (!isAdmin && !isAssignee && !isAssigner) {
               console.warn(`[Sync] Blocked unauthorized edit on task ${record.id} by ${user?.username}`);
               continue;
             }
           }
         }
-        await taskRepository.upsert(record);
+        result = await taskRepository.upsert(record);
       } else if (type === 'field') {
-        await fieldRepository.upsert(record);
+        before = await fieldRepository.findById(record.id);
+        result = await fieldRepository.upsert(record);
       } else if (v8Types.has(type)) {
-        await v8Repository.upsert(type, record);
+        before = await v8Repository.findById(type, record.id);
+        result = await v8Repository.upsert(type, record);
       } else {
         console.warn(`Unknown sync operation type: ${type}`);
+      }
+
+      if (result) {
+        const auditType = type === 'comments' ? 'comment' : type === 'categories' ? 'category' : type.replace(/s$/, '');
+        await v8Repository.appendAudit({
+          user: userEmail,
+          type: auditType,
+          recId: record.id,
+          projectId: result.projectId || record.projectId || null,
+          action: before ? (record.deleted ? 'delete' : 'update') : 'create',
+          title: result.title || result.name || result.content || result.text || record.id,
+          before: before ? JSON.stringify(before) : '',
+          after: JSON.stringify(result)
+        });
+        if (auditType === 'comment' && !record.deleted) realtimeService.publish('comment', result);
       }
     }
 

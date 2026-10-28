@@ -1,0 +1,10 @@
+import { Router } from 'express';
+import { authenticate, requirePermission } from '../middlewares/auth.js';
+import { backupController } from '../controllers/backup.controller.js';
+const router = Router();
+router.use(authenticate, requirePermission('manage_backups'));
+router.get('/', backupController.list);
+router.post('/', backupController.create);
+router.post('/:filename/restore', backupController.restore);
+router.get('/:filename', backupController.download);
+export default router;

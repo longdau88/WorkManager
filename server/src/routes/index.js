@@ -9,6 +9,11 @@ import fieldRoutes from './field.routes.js';
 import syncRoutes from './sync.routes.js';
 import uploadRoutes from './upload.routes.js';
 import netlabRoutes from './netlab.routes.js';
+import backupRoutes from './backup.routes.js';
+import notificationRoutes from './notification.routes.js';
+import realtimeRoutes from './realtime.routes.js';
+import exportRoutes from './export.routes.js';
+import auditRoutes from './audit.routes.js';
 import { getDbStatus } from '../config/db.js';
 
 const router = Router();
@@ -39,5 +44,10 @@ router.use('/fields', fieldRoutes);
 router.use('/sync', syncRoutes);
 router.use('/upload', uploadRoutes);
 router.use('/netlab', netlabRoutes);
+router.use('/backup', backupRoutes);
+router.use('/notifications', notificationRoutes);
+router.use('/realtime', realtimeRoutes);
+router.use('/exports', exportRoutes);
+router.use('/audit', auditRoutes);
 
 export default router;

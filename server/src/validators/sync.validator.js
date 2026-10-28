@@ -4,8 +4,10 @@ export const syncOpSchema = z.object({
   type: z.enum([
     'project', 'task', 'member', 'user', 'field',
     'diary', 'ledger', 'category', 'worker', 'labor',
-    'advance', 'contract', 'device', 'check', 'issue',
-    'receipt', 'guarantee', 'group'
+    'advance', 'advances', 'contract', 'contracts', 'device', 'devices',
+    'check', 'checks', 'issue', 'issues', 'receipt', 'receipts',
+    'guarantee', 'guarantees', 'group', 'groups', 'pgroup',
+    'comment', 'comments', 'categories'
   ]),
   record: z.object({
     id: z.string().min(1, 'ID bản ghi là bắt buộc'),

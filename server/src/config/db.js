@@ -19,7 +19,10 @@ export const SYSTEM_PERMISSIONS = [
   { id: 'delete_project', label: 'Xóa dự án' },
   { id: 'edit_all_projects', label: 'Toàn quyền chỉnh sửa mọi dự án' },
   { id: 'manage_project_permissions', label: 'Phân quyền người dùng cho từng dự án' },
-  { id: 'export_stats', label: 'Xem & Xuất báo cáo thống kê' }
+  { id: 'export_stats', label: 'Xem & Xuất báo cáo thống kê' },
+  { id: 'view_audit', label: 'Xem lịch sử thay đổi và audit' },
+  { id: 'export_reports', label: 'Xuất báo cáo DOCX/PDF' },
+  { id: 'manage_backups', label: 'Tạo và khôi phục backup' }
 ];
 
 // Default Roles
@@ -37,7 +40,7 @@ export const DEFAULT_ROLES = [
     name: 'manager',
     displayName: 'Quản lý dự án (PM)',
     description: 'Tạo dự án mới và quản lý các dự án được phân quyền',
-    permissions: ['create_project', 'manage_project_permissions', 'export_stats'],
+    permissions: ['create_project', 'manage_project_permissions', 'export_stats', 'view_audit', 'export_reports'],
     isSystem: false
   },
   {
@@ -144,7 +147,7 @@ export function readFallbackData() {
       if (!parsed.users || !parsed.users.length) parsed.users = getInitialFallbackData().users;
       if (!parsed.projectPermissions) parsed.projectPermissions = [];
       if (!Array.isArray(parsed.netlabTopologies)) parsed.netlabTopologies = [];
-      const v8Keys = ['diary', 'ledger', 'categories', 'workers', 'labor', 'advances', 'contracts', 'devices', 'checks', 'issues', 'receipts', 'guarantees', 'groups'];
+      const v8Keys = ['diary', 'ledger', 'categories', 'workers', 'labor', 'advances', 'contracts', 'devices', 'checks', 'issues', 'receipts', 'guarantees', 'groups', 'comments', 'auditLogs', 'notifications', 'presenceSessions', 'backups'];
       v8Keys.forEach(k => { if (!Array.isArray(parsed[k])) parsed[k] = []; });
       return parsed;
     }
@@ -295,7 +298,7 @@ export async function initDatabase() {
       await prisma.$connect();
       isPrismaConnected = true;
       console.log('✅ Kết nối MySQL thành công qua Prisma (Host: mysql-tlcserver.alwaysdata.net, DB: tlcserver_work_manager, Pool: 3)!');
-      
+
       // Tự động kiểm tra và khởi tạo dữ liệu ban đầu nếu chưa có data
       await seedInitialDataIfEmpty(prisma);
 

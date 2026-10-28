@@ -17,5 +17,14 @@ export const env = {
     : path.resolve(__dirname, '../../', process.env.UPLOAD_DIR || 'uploads'),
   maxUploadMb: parseInt(process.env.MAX_UPLOAD_MB || '20', 10),
   jwtSecret: process.env.JWT_SECRET || 'workmanager_super_secret_jwt_key_2026_tlc',
-  jwtExpiresIn: process.env.JWT_EXPIRES_IN || '7d'
+  jwtExpiresIn: process.env.JWT_EXPIRES_IN || '7d',
+  timezone: process.env.APP_TIMEZONE || 'Asia/Ho_Chi_Minh',
+  schedulerEnabled: process.env.SCHEDULER_ENABLED !== 'false',
+  schedulerCron: process.env.SCHEDULER_CRON || '*/15 * * * *',
+  backupCron: process.env.BACKUP_CRON || '0 2 * * *',
+  backupDir: process.env.BACKUP_DIR
+    ? path.resolve(__dirname, '../../', process.env.BACKUP_DIR)
+    : path.resolve(__dirname, '../../backups'),
+  backupRetention: parseInt(process.env.BACKUP_RETENTION || '14', 10),
+  publicBaseUrl: process.env.PUBLIC_BASE_URL || ''
 };

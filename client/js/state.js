@@ -7,7 +7,7 @@ export class StateManager {
       projects: [], tasks: [], users: [], fields: [],
       diary: [], ledger: [], categories: [], workers: [],
       labor: [], advances: [], contracts: [], devices: [],
-      checks: [], issues: [], receipts: [], guarantees: [], groups: []
+      checks: [], issues: [], receipts: [], guarantees: [], groups: [], comments: [], notifications: [], presence: []
     };
     this.queue = [];
     this.syncing = false;
@@ -54,7 +54,7 @@ export class StateManager {
       'projects', 'tasks', 'users', 'fields',
       'diary', 'ledger', 'categories', 'workers',
       'labor', 'advances', 'contracts', 'devices',
-      'checks', 'issues', 'receipts', 'guarantees', 'groups'
+      'checks', 'issues', 'receipts', 'guarantees', 'groups', 'comments', 'notifications', 'presence'
     ].forEach(k => {
       if (!Array.isArray(this.data[k])) this.data[k] = [];
     });
@@ -264,8 +264,8 @@ export class StateManager {
   memberBy(email) {
     if (!email) return null;
     const lower = String(email).trim().toLowerCase();
-    const u = (this.data.users || []).find(x => 
-      String(x.email || '').toLowerCase() === lower || 
+    const u = (this.data.users || []).find(x =>
+      String(x.email || '').toLowerCase() === lower ||
       String(x.username || '').toLowerCase() === lower
     );
     if (u) {
@@ -404,7 +404,7 @@ export class StateManager {
       diary: 'diary', ledger: 'ledger', category: 'categories', pgroup: 'groups', group: 'groups',
       worker: 'workers', labor: 'labor', advance: 'advances', contract: 'contracts',
       device: 'devices', receipt: 'receipts', guarantee: 'guarantees',
-      check: 'checks', issue: 'issues'
+      check: 'checks', issue: 'issues', comment: 'comments'
     };
     const typeKey = TYPE_KEY[type] || (type.endsWith('s') ? type : type + 's');
     const arr = this.data[typeKey];
@@ -509,7 +509,23 @@ export class StateManager {
           projects: res.projects || [],
           tasks: res.tasks || [],
           users: res.users || [],
-          fields: res.fields || []
+          fields: res.fields || [],
+          diary: res.diary || [],
+          ledger: res.ledger || [],
+          categories: res.categories || [],
+          workers: res.workers || [],
+          labor: res.labor || [],
+          advances: res.advances || [],
+          contracts: res.contracts || [],
+          devices: res.devices || [],
+          checks: res.checks || [],
+          issues: res.issues || [],
+          receipts: res.receipts || [],
+          guarantees: res.guarantees || [],
+          groups: res.groups || [],
+          comments: res.comments || [],
+          notifications: res.notifications || [],
+          presence: res.presence || []
         };
         // Re-apply remaining queue if any were added during sync
         this.queue.forEach(o => this.upsertLocal(o.type, o.record));

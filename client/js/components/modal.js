@@ -1103,7 +1103,30 @@ export const modals = {
       }
     }
 
-    // 7. Footer Info
+    // 7. Comments / task chat
+    const comments = (state.data.comments || [])
+      .filter(comment => comment.taskId === t.id && !comment.deleted)
+      .sort((a, b) => new Date(a.createdAt || 0) - new Date(b.createdAt || 0));
+    const commentsCountEl = document.getElementById('tu_comments_count');
+    if (commentsCountEl) commentsCountEl.textContent = String(comments.length);
+    const commentsListEl = document.getElementById('tu_comments_list');
+    if (commentsListEl) {
+      commentsListEl.innerHTML = comments.length
+        ? comments.map(comment => `
+          <div class="task-comment" style="padding:8px 0;border-bottom:1px solid var(--border-color, #e5e7eb)">
+            <div style="display:flex;justify-content:space-between;gap:8px;font-size:12px;color:var(--text-muted)">
+              <b>${state.esc(state.fullName(comment.createdBy) || comment.createdBy || 'Thành viên')}</b>
+              <span>${comment.createdAt ? new Date(comment.createdAt).toLocaleString('vi-VN') : ''}</span>
+            </div>
+            <div style="white-space:pre-wrap;margin-top:3px">${state.esc(comment.text || '')}</div>
+          </div>
+        `).join('')
+        : '<div class="small" style="color:var(--text-muted);padding:8px 0">Chưa có trao đổi nào.</div>';
+    }
+    const commentInputEl = document.getElementById('tu_comment_input');
+    if (commentInputEl) commentInputEl.value = '';
+
+    // 8. Footer Info
     const footerEl = document.getElementById('tu_footer_info');
     if (footerEl) {
       let info = '';
@@ -1131,6 +1154,25 @@ export const modals = {
     }
 
     openModalEl('modalTaskUpdates');
+  },
+
+  addTaskComment() {
+    const taskId = currentUpdatesTaskId;
+    const task = taskId ? state.taskById(taskId) : null;
+    const input = document.getElementById('tu_comment_input');
+    const text = input ? input.value.trim() : '';
+    if (!task || !text) return;
+
+    state.commit('comment', {
+      id: state.uid(),
+      taskId: task.id,
+      projectId: task.projectId || null,
+      text,
+      files: [],
+      deleted: false,
+      createdBy: api.userEmail || api.username
+    });
+    this.openTaskUpdates(task.id);
   },
 
   closeTaskUpdates() {
@@ -1252,28 +1294,28 @@ export const modals = {
       <div style="font-weight:700;font-size:var(--font-xs);color:var(--text-muted);text-transform:uppercase;margin:8px 0 4px">${state.esc(g.name)}</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 12px">
         ${g.fields.map(f => {
-          const v = info[f.id] ?? '';
-          const id = 'pf_' + f.id;
-          const lbl = state.esc(f.label) + (f.unit ? ` <span class="small">(${state.esc(f.unit)})</span>` : '');
-          let inp = '';
-          const isWide = f.type === 'map' || f.type === 'link';
-          if (f.type === 'number') {
-            inp = `<input id="${id}" type="number" step="any" value="${state.esc(v)}">`;
-          } else if (f.type === 'date') {
-            inp = `<input id="${id}" type="date" value="${state.esc(v)}">`;
-          } else if (f.type === 'select') {
-            const opts = String(f.options || '').split(',').map(s => s.trim()).filter(Boolean);
-            if (v && !opts.includes(v)) opts.push(v);
-            inp = `<select id="${id}"><option value="">—</option>${opts.map(o => `<option ${o === v ? 'selected' : ''}>${state.esc(o)}</option>`).join('')}</select>`;
-          } else if (f.type === 'map') {
-            inp = `<input id="${id}" type="url" value="${state.esc(v)}" placeholder="Dán link Google My Maps (google.com/maps/d/…)">`;
-          } else if (f.type === 'link') {
-            inp = `<input id="${id}" type="url" value="${state.esc(v)}" placeholder="Dán liên kết (https://…)">`;
-          } else {
-            inp = `<input id="${id}" value="${state.esc(v)}">`;
-          }
-          return `<div class="field" ${isWide ? 'style="grid-column: 1 / -1"' : ''}><label>${lbl}</label>${inp}</div>`;
-        }).join('')}
+      const v = info[f.id] ?? '';
+      const id = 'pf_' + f.id;
+      const lbl = state.esc(f.label) + (f.unit ? ` <span class="small">(${state.esc(f.unit)})</span>` : '');
+      let inp = '';
+      const isWide = f.type === 'map' || f.type === 'link';
+      if (f.type === 'number') {
+        inp = `<input id="${id}" type="number" step="any" value="${state.esc(v)}">`;
+      } else if (f.type === 'date') {
+        inp = `<input id="${id}" type="date" value="${state.esc(v)}">`;
+      } else if (f.type === 'select') {
+        const opts = String(f.options || '').split(',').map(s => s.trim()).filter(Boolean);
+        if (v && !opts.includes(v)) opts.push(v);
+        inp = `<select id="${id}"><option value="">—</option>${opts.map(o => `<option ${o === v ? 'selected' : ''}>${state.esc(o)}</option>`).join('')}</select>`;
+      } else if (f.type === 'map') {
+        inp = `<input id="${id}" type="url" value="${state.esc(v)}" placeholder="Dán link Google My Maps (google.com/maps/d/…)">`;
+      } else if (f.type === 'link') {
+        inp = `<input id="${id}" type="url" value="${state.esc(v)}" placeholder="Dán liên kết (https://…)">`;
+      } else {
+        inp = `<input id="${id}" value="${state.esc(v)}">`;
+      }
+      return `<div class="field" ${isWide ? 'style="grid-column: 1 / -1"' : ''}><label>${lbl}</label>${inp}</div>`;
+    }).join('')}
       </div>
     `).join('');
   },
@@ -1539,8 +1581,8 @@ export const modals = {
           <thead><tr><th>Tên nhóm dự án</th><th class="num">Số dự án</th><th></th></tr></thead>
           <tbody>
             ${groups.map(g => {
-              const n = state.data.projects.filter(p => p.groupId === g.id).length;
-              return `
+      const n = state.data.projects.filter(p => p.groupId === g.id).length;
+      return `
                 <tr>
                   <td><b>${state.esc(g.name)}</b></td>
                   <td class="num">${n}</td>
@@ -1549,7 +1591,7 @@ export const modals = {
                   </td>
                 </tr>
               `;
-            }).join('')}
+    }).join('')}
           </tbody>
         </table>
       </div>
@@ -1588,9 +1630,9 @@ export const modals = {
           <thead><tr><th>Tên danh mục</th><th>Loại dùng</th><th class="num">Số phiếu</th><th></th></tr></thead>
           <tbody>
             ${cats.map(c => {
-              const n = state.data.ledger.filter(l => l.categoryId === c.id).length;
-              const kindLabel = c.kind === 'chi' ? 'Chi' : c.kind === 'nhan' ? 'Nhận' : 'Cả hai';
-              return `
+      const n = state.data.ledger.filter(l => l.categoryId === c.id).length;
+      const kindLabel = c.kind === 'chi' ? 'Chi' : c.kind === 'nhan' ? 'Nhận' : 'Cả hai';
+      return `
                 <tr>
                   <td><b>${state.esc(c.name)}</b></td>
                   <td><span class="badge ${c.kind === 'chi' ? 'b-red' : c.kind === 'nhan' ? 'b-green' : 'b-blue'}">${kindLabel}</span></td>
@@ -1600,7 +1642,7 @@ export const modals = {
                   </td>
                 </tr>
               `;
-            }).join('')}
+    }).join('')}
           </tbody>
         </table>
       </div>
@@ -1746,6 +1788,7 @@ export const modals = {
       closeModalEl('modalLogin');
       errEl.textContent = '';
       window.app.render();
+      window.app.startRealtime();
       state.flush();
     } catch (err) {
       errEl.textContent = '❌ ' + (err.message || 'Đăng nhập không thành công');

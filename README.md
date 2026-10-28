@@ -179,6 +179,41 @@ Khi khởi động hệ thống lần đầu, tài khoản quản trị mặc đ
    - Các hộp thoại (Modals) tự động chuyển sang phong cách **Bottom-Sheet** trên điện thoại với thanh hành động (Lưu/Đóng) cố định tiện dụng.
    - Cỡ chữ ô nhập liệu được chuẩn hóa 16px trên di động để chống hiện tượng tự động phóng to (auto-zoom) trên iOS Safari.
 
+## 🧭 Lộ trình cập nhật từ V10
+
+Đã đối chiếu `V10/Code.gs` và `V10/Index.html` với ứng dụng Node.js hiện tại. Các module ERP chính của V10 đã có tương đương; các phần dưới đây là những khác biệt cần hoàn thiện.
+
+### Đã cập nhật trong đợt này
+
+- **Phân quyền dữ liệu ERP ở backend:** bootstrap chỉ trả về dữ liệu thuộc dự án được cấp quyền; sync từ chối ghi dữ liệu dự án ngoài phạm vi hoặc quyền chỉ xem.
+- **Trao đổi theo task:** thêm `Comment` vào bootstrap, cache, hàng đợi offline và modal báo cáo tiến độ.
+- **Audit snapshot:** mỗi thao tác sync hợp lệ lưu bản trước/sau vào `AuditLog`; thêm `GET /api/audit` cho tài khoản có quyền `view_audit`.
+
+### Các giai đoạn tiếp theo
+
+1. **Khôi phục và backup:** thêm màn hình lịch sử, endpoint restore có transaction, backup định kỳ và retention; chỉ Admin/Manager được thao tác.
+2. **Nhắc việc và email:** scheduler cho deadline, bảo lãnh, đợt thanh toán và issue quá hạn; thêm chống gửi trùng và nhật ký gửi.
+3. **Xuất hồ sơ:** báo cáo tuần, nhật ký, thiết bị, nghiệm thu và lỗi ở DOCX/PDF; giữ CSV hiện có làm định dạng dữ liệu.
+4. **Presence/thông báo:** unread count, trạng thái online và polling hoặc SSE cho bình luận/task.
+5. **OTP email:** chỉ triển khai sau khi chốt nhà cung cấp email, chính sách hết hạn phiên và phương án fallback cho môi trường offline.
+
+### Tiêu chí nghiệm thu
+
+- User không thuộc dự án không nhận được dữ liệu ERP của dự án đó và không thể ghi bằng cách gọi API trực tiếp.
+- Comment hiển thị sau lần đồng bộ kế tiếp, hoạt động khi offline và từ chối comment vào task ngoài quyền.
+- Audit lưu được người thao tác, loại bản ghi, hành động, project và snapshot trước/sau.
+- Mọi scheduler/export phải có kiểm thử quyền, chống lặp và kiểm thử trên fallback store trước khi bật production.
+
+### Trạng thái triển khai bổ sung
+
+- Backup snapshot JSON, retention, checksum, restore fallback và restore MySQL transaction: `POST /api/backup`, `POST /api/backup/:filename/restore`.
+- Scheduler theo `SCHEDULER_CRON` và `BACKUP_CRON`, mặc định nhắc mỗi 15 phút và backup lúc 02:00 theo `APP_TIMEZONE`.
+- Notification unread cho deadline task/project, issue, bảo lãnh và khoản thanh toán: `/api/notifications`.
+- Báo cáo server-side: `/api/exports/report.docx` và `/api/exports/report.pdf`.
+- Presence heartbeat và SSE realtime: `/api/realtime/presence`, `/api/realtime/events`.
+
+Sau khi cập nhật schema trên môi trường có database, chạy `npm run db:push` hoặc tạo migration trước khi bật production.
+
 ---
 
 ## ☁️ Hướng dẫn Triển khai lên Vercel (Deployment Guide)

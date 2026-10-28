@@ -8,7 +8,7 @@ class ApiClient {
     try {
       const u = localStorage.getItem('wm.user');
       if (u) this.currentUser = JSON.parse(u);
-    } catch (e) {}
+    } catch (e) { }
   }
 
   setAuth(token, user) {
@@ -111,6 +111,45 @@ class ApiClient {
       method: 'POST',
       body: { ops }
     });
+  }
+
+  getAudit(filters = {}) {
+    const params = new URLSearchParams();
+    Object.entries(filters).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && value !== '') params.set(key, value);
+    });
+    const query = params.toString();
+    return this.request(`/audit${query ? `?${query}` : ''}`);
+  }
+
+  getNotifications(unreadOnly = false) {
+    return this.request(`/notifications?unreadOnly=${unreadOnly}`);
+  }
+
+  markNotificationsRead(ids) {
+    return this.request('/notifications/read', { method: 'POST', body: { ids } });
+  }
+
+  heartbeatPresence(projectId = null) {
+    return this.request('/realtime/presence', { method: 'POST', body: { projectId } });
+  }
+
+  getPresence(projectId = null) {
+    const query = projectId ? `?projectId=${encodeURIComponent(projectId)}` : '';
+    return this.request(`/realtime/presence${query}`);
+  }
+
+  reportUrl(format) {
+    return `${this.baseUrl}/exports/report.${format}?token=${encodeURIComponent(this.token)}`;
+  }
+
+  createBackup() { return this.request('/backup', { method: 'POST' }); }
+
+  connectEvents(onEvent) {
+    if (!this.token) return null;
+    const source = new EventSource(`${this.baseUrl}/realtime/events?token=${encodeURIComponent(this.token)}`);
+    ['comment', 'notification', 'presence'].forEach(type => source.addEventListener(type, event => onEvent(type, JSON.parse(event.data))));
+    return source;
   }
 
   // Projects
