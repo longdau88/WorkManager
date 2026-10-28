@@ -64,6 +64,7 @@ class App {
 
   startPresence() {
     clearInterval(this.presenceTimer);
+    clearInterval(this.presenceRefreshTimer);
     const heartbeat = () => api.heartbeatPresence(null)
       .then(record => {
         this.mergePresence(record);
@@ -72,6 +73,23 @@ class App {
       .catch(() => { });
     heartbeat();
     this.presenceTimer = setInterval(heartbeat, 60000);
+    this.refreshPresence();
+    this.presenceRefreshTimer = setInterval(() => this.refreshPresence(), 15000);
+  }
+
+  async refreshPresence() {
+    if (!api.token) return;
+    try {
+      const presence = await api.getPresence(null);
+      state.data.presence = (presence || []).map(item => ({
+        ...item,
+        projectId: item.projectId || 'all'
+      }));
+      state.persist();
+      this.updateOnlineCount();
+    } catch (_) {
+      this.updateOnlineCount();
+    }
   }
 
   updateNotificationCount() {
@@ -114,6 +132,7 @@ class App {
         </div>
       `).join('') : '<div class="header-popover-empty">Không có thông báo.</div>';
       popover.hidden = false;
+      this.positionHeaderPopover(popover, document.getElementById('btnNotifications'));
       const unreadIds = notifications.filter(item => !item.readAt).map(item => item.id);
       if (unreadIds.length) {
         await api.markNotificationsRead(unreadIds);
@@ -154,6 +173,11 @@ class App {
     this.closeHeaderPopovers();
     try {
       const presence = await api.getPresence(null);
+      state.data.presence = (presence || []).map(item => ({
+        ...item,
+        projectId: item.projectId || 'all'
+      }));
+      state.persist();
       const cutoff = Date.now() - 120000;
       const latestByUser = new Map();
       (presence || []).filter(item => new Date(item.lastSeen).getTime() >= cutoff).forEach(item => {
@@ -171,7 +195,10 @@ class App {
         return `<div class="header-popover-item"><div class="header-popover-item-title"><span style="color:var(--success-main)">●</span> ${state.esc(name)}</div><div class="header-popover-item-meta">Hoạt động ${new Date(item.lastSeen).toLocaleString('vi-VN')}</div></div>`;
       }).join('') : '<div class="header-popover-empty">Chưa có người dùng online.</div>';
       const popover = document.getElementById('onlinePopover');
-      if (popover) popover.hidden = false;
+      if (popover) {
+        popover.hidden = false;
+        this.positionHeaderPopover(popover, document.getElementById('btnOnlineUsers'));
+      }
     } catch (error) {
       this.showActionStatus(`Không thể tải danh sách online: ${error.message}`, true);
     }
@@ -179,6 +206,17 @@ class App {
 
   closeHeaderPopovers() {
     ['notificationPopover', 'onlinePopover'].forEach(id => { const element = document.getElementById(id); if (element) element.hidden = true; });
+  }
+
+  positionHeaderPopover(popover, trigger) {
+    if (!popover || !trigger) return;
+    const rect = trigger.getBoundingClientRect();
+    const gap = 8;
+    const width = Math.min(360, window.innerWidth - 16);
+    const left = Math.max(8, Math.min(rect.left, window.innerWidth - width - 8));
+    popover.style.width = `${width}px`;
+    popover.style.left = `${left}px`;
+    popover.style.top = `${rect.bottom + gap}px`;
   }
 
   showActionStatus(message, isError = false) {
@@ -209,6 +247,19 @@ class App {
   }
 
   bindEvents() {
+    const repositionPopovers = () => {
+      const notificationPopover = document.getElementById('notificationPopover');
+      const onlinePopover = document.getElementById('onlinePopover');
+      if (notificationPopover && !notificationPopover.hidden) {
+        this.positionHeaderPopover(notificationPopover, document.getElementById('btnNotifications'));
+      }
+      if (onlinePopover && !onlinePopover.hidden) {
+        this.positionHeaderPopover(onlinePopover, document.getElementById('btnOnlineUsers'));
+      }
+    };
+    window.addEventListener('resize', repositionPopovers);
+    window.addEventListener('scroll', repositionPopovers, true);
+
     document.addEventListener('click', event => {
       const target = event.target;
       const notificationPopover = document.getElementById('notificationPopover');

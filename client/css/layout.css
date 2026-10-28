@@ -67,8 +67,8 @@ header {
 
 .header-popover {
   position: fixed;
-  top: 62px;
-  right: 16px;
+  top: auto;
+  left: auto;
   z-index: 80;
   width: min(360px, calc(100vw - 24px));
   max-height: min(480px, calc(100vh - 80px));
@@ -186,8 +186,7 @@ header {
   }
 
   .header-popover {
-    top: 56px;
-    right: 8px;
+    width: min(360px, calc(100vw - 16px));
   }
 
   .report-format-options {
