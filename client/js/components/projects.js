@@ -35,8 +35,8 @@ export function renderProjectsSidebar() {
     const warn = s.overdue
       ? `<span class="badge b-red" title="Quá hạn">${s.overdue}</span>`
       : s.soon
-      ? `<span class="badge b-orange" title="Sắp hạn">${s.soon}</span>`
-      : '';
+        ? `<span class="badge b-orange" title="Sắp hạn">${s.soon}</span>`
+        : '';
 
     html += `
       <div class="proj-item ${isAct ? 'active' : ''}" onclick="window.app.selProject('${p.id}')">
@@ -118,8 +118,8 @@ export function renderProjectHeader() {
     dueBadge = (s.pct < 100 && d < 0)
       ? `<span class="badge b-red">⚠ Dự án quá hạn ${-d} ngày</span>`
       : (s.pct < 100 && d <= CONFIG.WARN_DAYS * 2)
-      ? `<span class="badge b-orange">Hạn ${state.fmtDate(p.dueDate)} · còn ${d} ngày</span>`
-      : `<span class="badge b-gray">Hạn ${state.fmtDate(p.dueDate)}</span>`;
+        ? `<span class="badge b-orange">Hạn ${state.fmtDate(p.dueDate)} · còn ${d} ngày</span>`
+        : `<span class="badge b-gray">Hạn ${state.fmtDate(p.dueDate)}</span>`;
   }
 
   // Map Detection (via p.mapUrl, p.info.f_map, or any field with type 'map')
@@ -247,15 +247,15 @@ export function renderProjectHeader() {
       <span class="project-members-label">👥 Thành viên triển khai (${memberList.length}):</span>
       <div class="project-members-chips">
         ${memberList.map(m => {
-          const isAct = curFilterAssignee === m.email;
-          const pct = m.tasksCount ? Math.round((m.tasksDone / m.tasksCount) * 100) : 0;
-          return `
+    const isAct = curFilterAssignee === m.email;
+    const pct = m.tasksCount ? Math.round((m.tasksDone / m.tasksCount) * 100) : 0;
+    return `
             <span class="project-member-chip ${isAct ? 'active' : ''}" onclick="window.app.setAssigneeFilter('${isAct ? '' : state.esc(m.email)}')" title="Lọc theo ${state.esc(m.name)} (${m.tasksDone}/${m.tasksCount} việc hoàn thành)">
               👤 <b>${state.esc(m.name)}</b>
               <span class="chip-progress">${m.tasksCount ? `${m.tasksDone}/${m.tasksCount} (${pct}%)` : 'Chưa giao việc'}</span>
             </span>
           `;
-        }).join('')}
+  }).join('')}
         ${canManage ? `
           <button class="btn ghost" style="padding:2px 8px;font-size:11px;color:var(--pri-500)" onclick="window.app.openProjectPermissionsModal('${p.id}')" title="Thêm / Phân quyền tài khoản tham gia triển khai dự án">
             + Phân quyền tài khoản
@@ -277,6 +277,7 @@ export function renderProjectHeader() {
             ${canManage ? 'Được sửa' : 'Chỉ xem'}
           </span>
           <button class="btn" onclick="window.app.openProjectModal('${p.id}')">${canManage ? '✎ Sửa' : 'Xem'}</button>
+          <button class="btn" onclick="window.app.openReportExportModal('${p.id}')" title="Xuất báo cáo của dự án này">📊 Xuất báo cáo</button>
           ${canManage ? `
             <button class="btn primary" onclick="window.app.openTaskModal(null, null)" title="Tạo và giao việc mới trong dự án này">+ Giao việc</button>
             <button class="btn" onclick="window.app.openProjectPermissionsModal('${p.id}')" title="Phân quyền tài khoản đối với dự án này">👥 Phân quyền</button>

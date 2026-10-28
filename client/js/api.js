@@ -143,8 +143,9 @@ class ApiClient {
     return `${this.baseUrl}/exports/report.${format}?token=${encodeURIComponent(this.token)}`;
   }
 
-  async downloadReport(format) {
-    const response = await fetch(`${this.baseUrl}/exports/report.${format}`, {
+  async downloadReport(format, projectId = '') {
+    const query = projectId ? `?projectId=${encodeURIComponent(projectId)}` : '';
+    const response = await fetch(`${this.baseUrl}/exports/report.${format}${query}`, {
       headers: { Authorization: `Bearer ${this.token}` }
     });
     if (!response.ok) {

@@ -114,6 +114,62 @@ header {
   font-size: var(--font-sm);
 }
 
+.report-export-modal {
+  max-width: 460px;
+}
+
+.report-format-options {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin: 18px 0;
+}
+
+.report-format-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 82px;
+  padding: 14px;
+  text-align: left;
+  color: var(--text-primary);
+  background: var(--bg-hover);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+}
+
+.report-format-option:hover {
+  border-color: var(--pri-500);
+  background: var(--bg-surface);
+}
+
+.report-format-option:disabled {
+  opacity: .6;
+  cursor: wait;
+}
+
+.report-format-option b,
+.report-format-option small {
+  display: block;
+}
+
+.report-format-option small {
+  margin-top: 4px;
+  color: var(--text-muted);
+  font-size: var(--font-xs);
+}
+
+.report-format-icon {
+  font-size: 24px;
+}
+
+.report-modal-status {
+  min-height: 20px;
+  color: var(--text-muted);
+  font-size: var(--font-sm);
+}
+
 @media (max-width: 700px) {
   .header-action-status {
     display: none;
@@ -122,6 +178,10 @@ header {
   .header-popover {
     top: 56px;
     right: 8px;
+  }
+
+  .report-format-options {
+    grid-template-columns: 1fr;
   }
 }
 

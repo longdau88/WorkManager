@@ -2194,7 +2194,7 @@ let cachedPermissions = [];
 let editUserId = null;
 let editRoleId = null;
 
-function openModalEl(id) {
+export function openModalEl(id) {
   const el = document.getElementById(id);
   if (el) el.classList.add('show');
 }

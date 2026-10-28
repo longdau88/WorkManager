@@ -4,7 +4,7 @@ import { CONFIG } from './config.js';
 import { renderProjectsSidebar, renderProjectHeader } from './components/projects.js';
 import { renderTasksMain } from './components/tasks.js';
 import { renderStatsView, exportStatsCsv } from './components/stats.js';
-import { modals, closeModalEl } from './components/modal.js';
+import { modals, closeModalEl, openModalEl } from './components/modal.js';
 import {
   renderProjectTabs,
   moduleState,
@@ -122,7 +122,8 @@ class App {
     try {
       if (button) { button.disabled = true; button.textContent = 'Đang tạo…'; }
       this.showActionStatus(`Đang tạo báo cáo ${format.toUpperCase()}…`);
-      const blob = await api.downloadReport(format);
+      const projectId = state.curProject !== 'all' ? state.curProject : '';
+      const blob = await api.downloadReport(format, projectId);
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
@@ -173,6 +174,24 @@ class App {
     this.actionStatusTimer = setTimeout(() => { element.textContent = ''; }, 5000);
   }
 
+  openReportExportModal(projectId) {
+    state.curProject = projectId || state.curProject;
+    const project = state.projById(state.curProject);
+    const title = document.getElementById('reportExportTitle');
+    if (title) title.textContent = project ? `Xuất báo cáo: ${project.name}` : 'Xuất báo cáo dự án';
+    const status = document.getElementById('reportStatus');
+    if (status) status.textContent = '';
+    openModalEl('modalReportExport');
+  }
+
+  closeReportExportModal() {
+    closeModalEl('modalReportExport');
+  }
+
+  exportProjectReport(format, button) {
+    return this.downloadReport(format, button);
+  }
+
   bindEvents() {
     // Search Input
     const searchInput = document.getElementById('searchTasks');
@@ -207,7 +226,7 @@ class App {
         [
           'modalTask', 'modalTaskUpdates', 'modalProject', 'modalSettings', 'modalProjectPermissions', 'modalLightbox',
           'modalDiary', 'modalLedger', 'modalWorker', 'modalAdvance', 'modalContract',
-          'modalDevice', 'modalCheck', 'modalIssue', 'modalReceipt', 'modalGuarantee'
+          'modalDevice', 'modalCheck', 'modalIssue', 'modalReceipt', 'modalGuarantee', 'modalReportExport'
         ].forEach(id => closeModalEl(id));
       }
     });
