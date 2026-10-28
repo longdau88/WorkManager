@@ -291,7 +291,15 @@ class App {
   onTaskUpdatesGoEdit() { modals.onTaskUpdatesGoEdit(); }
   getCurrentTaskId() { return modals.getCurrentTaskId(); }
 
-  openProjectModal(id) { modals.openProject(id); }
+  openProjectModal(id, focusFieldId) { modals.openProject(id, focusFieldId); }
+  toggleProjectMap(projectId) {
+    const pId = projectId || state.curProject;
+    if (!pId || pId === 'all') return;
+    const k = 'wm.mapOpen_' + pId;
+    const current = localStorage.getItem(k) !== 'false';
+    localStorage.setItem(k, !current);
+    renderProjectHeader();
+  }
   closeProjectModal() { closeModalEl('modalProject'); }
   saveProjectModal() { modals.saveProject(); }
   deleteProjectModal() { modals.deleteProject(); }

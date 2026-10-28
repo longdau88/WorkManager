@@ -1147,7 +1147,7 @@ export const modals = {
   },
 
   // ================= PROJECT MODAL =================
-  openProject(id) {
+  openProject(id, focusFieldId) {
     editProjId = id || null;
     const p = id ? state.projById(id) : null;
 
@@ -1155,6 +1155,11 @@ export const modals = {
     document.getElementById('p_name').value = p ? p.name : '';
     document.getElementById('p_due').value = p ? (p.dueDate || '') : '';
     document.getElementById('p_note').value = p ? (p.note || '') : '';
+
+    const mapInput = document.getElementById('p_mapUrl');
+    if (mapInput) {
+      mapInput.value = p ? (p.mapUrl || (p.info && p.info.f_map) || '') : '';
+    }
 
     const stageEl = document.getElementById('p_stage');
     if (stageEl) stageEl.value = p ? (p.stage || 'doing') : 'planning';
@@ -1199,7 +1204,17 @@ export const modals = {
 
     document.getElementById('btnDeleteProject').style.display = p ? '' : 'none';
     openModalEl('modalProject');
-    if (!p) setTimeout(() => document.getElementById('p_name').focus(), 50);
+    if (focusFieldId) {
+      setTimeout(() => {
+        const el = document.getElementById(focusFieldId);
+        if (el) {
+          el.focus();
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }, 100);
+    } else if (!p) {
+      setTimeout(() => document.getElementById('p_name').focus(), 50);
+    }
   },
 
   renderColorSwatches() {
@@ -1241,6 +1256,7 @@ export const modals = {
           const id = 'pf_' + f.id;
           const lbl = state.esc(f.label) + (f.unit ? ` <span class="small">(${state.esc(f.unit)})</span>` : '');
           let inp = '';
+          const isWide = f.type === 'map' || f.type === 'link';
           if (f.type === 'number') {
             inp = `<input id="${id}" type="number" step="any" value="${state.esc(v)}">`;
           } else if (f.type === 'date') {
@@ -1249,10 +1265,14 @@ export const modals = {
             const opts = String(f.options || '').split(',').map(s => s.trim()).filter(Boolean);
             if (v && !opts.includes(v)) opts.push(v);
             inp = `<select id="${id}"><option value="">—</option>${opts.map(o => `<option ${o === v ? 'selected' : ''}>${state.esc(o)}</option>`).join('')}</select>`;
+          } else if (f.type === 'map') {
+            inp = `<input id="${id}" type="url" value="${state.esc(v)}" placeholder="Dán link Google My Maps (google.com/maps/d/…)">`;
+          } else if (f.type === 'link') {
+            inp = `<input id="${id}" type="url" value="${state.esc(v)}" placeholder="Dán liên kết (https://…)">`;
           } else {
             inp = `<input id="${id}" value="${state.esc(v)}">`;
           }
-          return `<div class="field"><label>${lbl}</label>${inp}</div>`;
+          return `<div class="field" ${isWide ? 'style="grid-column: 1 / -1"' : ''}><label>${lbl}</label>${inp}</div>`;
         }).join('')}
       </div>
     `).join('');
@@ -1343,6 +1363,15 @@ export const modals = {
     const retInput = document.getElementById('p_retentionPct');
     const retVal = retInput ? (parseFloat(retInput.value) || 5) : (old ? old.retentionPct : 5);
 
+    const mapInput = document.getElementById('p_mapUrl');
+    const mapUrlVal = mapInput ? mapInput.value.trim() : (old ? (old.mapUrl || '') : '');
+    const collectedInfo = this.collectProjectInfo(old && old.info);
+    if (mapUrlVal) {
+      collectedInfo.f_map = mapUrlVal;
+    } else if (collectedInfo.f_map) {
+      // If entered via dynamic field pf_f_map
+    }
+
     const record = Object.assign({ id: state.uid(), createdAt: Date.now(), deleted: false }, old || {}, {
       name,
       color: selColor,
@@ -1350,9 +1379,10 @@ export const modals = {
       groupId: groupVal,
       contractValue: contractVal,
       retentionPct: retVal,
+      mapUrl: mapUrlVal || collectedInfo.f_map || '',
       dueDate: document.getElementById('p_due').value,
       note: document.getElementById('p_note').value,
-      info: this.collectProjectInfo(old && old.info),
+      info: collectedInfo,
       folders,
       files: projFileCtx.files
     });

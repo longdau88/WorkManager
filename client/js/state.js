@@ -383,6 +383,15 @@ export class StateManager {
     return this.canCompleteTask(t, u);
   }
 
+  // Quyền quản lý/sửa dự án: Admin, role có quyền edit_all_projects hoặc owner/editor dự án
+  canManageProject(p, u = api.currentUser) {
+    if (!u) return false;
+    if (u.isAdmin || u.roleName === 'admin' || (u.permissions || []).includes('edit_all_projects')) return true;
+    if (!p) return false;
+    const perm = (u.projectPermissions || []).find(x => x.projectId === p.id);
+    return Boolean(perm && (perm.access === 'owner' || perm.access === 'editor'));
+  }
+
   // Quyền can thiệp bất kỳ vào task
   canModifyTask(t) {
     return this.canEditTask(t) || this.canUpdateProgress(t);

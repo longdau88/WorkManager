@@ -23,7 +23,9 @@ export const CONFIG = {
     ['text', 'Văn bản'],
     ['number', 'Số'],
     ['date', 'Ngày'],
-    ['select', 'Lựa chọn']
+    ['select', 'Lựa chọn'],
+    ['map', 'Bản đồ vị trí (Google My Maps)'],
+    ['link', 'Liên kết (URL)']
   ],
   FILTERS: [
     ['all', 'Tất cả'],

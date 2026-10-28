@@ -60,6 +60,7 @@ export const DEFAULT_ROLES = [
 
 // Default initial fields matching Code.gs
 export const DEFAULT_FIELDS = [
+  { id: 'f_map', label: 'Bản đồ vị trí (My Maps)', type: 'map', unit: '', group: 'Thông tin chung', options: '', sort: 5 },
   { id: 'f_cdt', label: 'Chủ đầu tư', type: 'text', unit: '', group: 'Thông tin chung', options: '', sort: 10 },
   { id: 'f_sohd', label: 'Số hợp đồng', type: 'text', unit: '', group: 'Thông tin chung', options: '', sort: 20 },
   { id: 'f_giatri', label: 'Giá trị hợp đồng', type: 'number', unit: 'VNĐ', group: 'Thông tin chung', options: '', sort: 30 },
@@ -230,7 +231,28 @@ async function seedInitialDataIfEmpty(p) {
           }
         });
       }
-      console.log('✅ Đã nạp 10 trường thông tin mẫu vào MySQL!');
+      console.log('✅ Đã nạp trường thông tin mẫu vào MySQL!');
+    } else {
+      // Đảm bảo tất cả các trường DEFAULT_FIELDS luôn sẵn sàng trong MySQL
+      for (const f of DEFAULT_FIELDS) {
+        const existing = await p.field.findUnique({ where: { id: f.id } });
+        if (!existing) {
+          await p.field.create({
+            data: {
+              id: f.id,
+              label: f.label,
+              type: f.type,
+              unit: f.unit,
+              group: f.group,
+              options: f.options,
+              sort: f.sort,
+              deleted: false,
+              updatedBy: 'system'
+            }
+          });
+          console.log(`✅ Đã bổ sung trường ${f.id} (${f.label}) vào MySQL!`);
+        }
+      }
     }
   } catch (err) {
     console.error('Lỗi khi kiểm tra/tạo dữ liệu ban đầu trong MySQL:', err);
