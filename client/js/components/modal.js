@@ -16,7 +16,116 @@ let canUserCompleteTask = true;
 let canUserDeleteTask = true;
 let isCurrentTaskReadOnly = false;
 
+function isImageFile(f) {
+  if (!f) return false;
+  if (f.mime && String(f.mime).toLowerCase().startsWith('image/')) return true;
+  const name = String(f.name || f.filename || f.url || '').toLowerCase();
+  return /\.(jpe?g|png|gif|webp|svg|bmp|ico|heic)$/i.test(name);
+}
+
+function getFileCategory(f) {
+  const name = String(f.name || f.filename || f.url || '').toLowerCase();
+  if (isImageFile(f)) return { type: 'image', icon: '🖼️', label: 'Hình ảnh', color: '#2563eb', bg: 'rgba(37, 99, 235, 0.1)' };
+  if (/\.pdf$/i.test(name)) return { type: 'pdf', icon: '📄', label: 'PDF', color: '#ef4444', bg: 'rgba(239, 68, 68, 0.1)' };
+  if (/\.(xlsx?|csv)$/i.test(name)) return { type: 'excel', icon: '📊', label: 'Excel', color: '#10b981', bg: 'rgba(16, 185, 129, 0.1)' };
+  if (/\.(docx?|rtf|txt)$/i.test(name)) return { type: 'word', icon: '📝', label: 'Word / Text', color: '#3b82f6', bg: 'rgba(59, 130, 246, 0.1)' };
+  if (/\.(pptx?)$/i.test(name)) return { type: 'powerpoint', icon: '📊', label: 'PowerPoint', color: '#f97316', bg: 'rgba(249, 115, 22, 0.1)' };
+  if (/\.(zip|rar|7z|tar|gz)$/i.test(name)) return { type: 'archive', icon: '📦', label: 'Tệp nén', color: '#8b5cf6', bg: 'rgba(139, 92, 246, 0.1)' };
+  if (/\.(mp4|avi|mov|mkv|webm)$/i.test(name)) return { type: 'video', icon: '🎬', label: 'Video', color: '#ec4899', bg: 'rgba(236, 72, 153, 0.1)' };
+  if (/\.(mp3|wav|ogg)$/i.test(name)) return { type: 'audio', icon: '🎵', label: 'Audio', color: '#06b6d4', bg: 'rgba(6, 182, 212, 0.1)' };
+  if (/\.(dwg|dxf)$/i.test(name)) return { type: 'cad', icon: '📐', label: 'Bản vẽ CAD', color: '#f59e0b', bg: 'rgba(245, 158, 11, 0.1)' };
+  return { type: 'file', icon: '📎', label: 'Tệp tin', color: '#64748b', bg: 'rgba(100, 116, 139, 0.1)' };
+}
+
 export const modals = {
+  // ================= TASK MODAL TABS =================
+  switchTaskTab(tab) {
+    const isProg = tab === 'progress';
+    const btnProg = document.getElementById('tabBtnTaskProgress');
+    const btnSettings = document.getElementById('tabBtnTaskSettings');
+    const paneProg = document.getElementById('taskPaneProgress');
+    const paneSettings = document.getElementById('taskPaneSettings');
+
+    if (btnProg) btnProg.classList.toggle('active', isProg);
+    if (btnSettings) btnSettings.classList.toggle('active', !isProg);
+    if (paneProg) {
+      paneProg.style.display = isProg ? 'block' : 'none';
+      paneProg.classList.toggle('active', isProg);
+    }
+    if (paneSettings) {
+      paneSettings.style.display = isProg ? 'none' : 'block';
+      paneSettings.classList.toggle('active', !isProg);
+    }
+  },
+
+  onTaskNoteInput() {
+    const noteEl = document.getElementById('t_note');
+    const noteVal = (noteEl ? noteEl.value : '').trim();
+    const viewEl = document.getElementById('t_note_view');
+    if (viewEl) {
+      if (noteVal) {
+        viewEl.innerHTML = state.esc(noteVal).replace(/\n/g, '<br>');
+      } else {
+        viewEl.innerHTML = '<span class="note-empty-state">📝 Chưa có ghi chú hoặc hướng dẫn chi tiết cho công việc này.</span>';
+      }
+    }
+  },
+
+  openLightbox(url, name, size) {
+    const img = document.getElementById('lightboxImg');
+    const fn = document.getElementById('lightboxFileName');
+    const fs = document.getElementById('lightboxFileSize');
+    const dl = document.getElementById('lightboxDownloadBtn');
+    const op = document.getElementById('lightboxOpenNewTabBtn');
+
+    if (img) img.src = url || '';
+    if (fn) fn.textContent = name || 'Hình ảnh';
+    if (fs) fs.textContent = size ? `(${size})` : '';
+    if (dl) {
+      dl.href = url || '';
+      dl.setAttribute('download', name || 'image');
+    }
+    if (op) op.href = url || '';
+    openModalEl('modalLightbox');
+  },
+
+  closeLightbox() {
+    closeModalEl('modalLightbox');
+    setTimeout(() => {
+      const img = document.getElementById('lightboxImg');
+      if (img) img.src = '';
+    }, 200);
+  },
+
+  setupTaskUploadDropzone() {
+    const dropzone = document.getElementById('t_upload_dropzone');
+    if (!dropzone || dropzone.__dropSetup) return;
+    dropzone.__dropSetup = true;
+
+    ['dragenter', 'dragover'].forEach(eventName => {
+      dropzone.addEventListener(eventName, e => {
+        e.preventDefault();
+        e.stopPropagation();
+        dropzone.classList.add('drag-over');
+      }, false);
+    });
+
+    ['dragleave', 'drop'].forEach(eventName => {
+      dropzone.addEventListener(eventName, e => {
+        e.preventDefault();
+        e.stopPropagation();
+        dropzone.classList.remove('drag-over');
+      }, false);
+    });
+
+    dropzone.addEventListener('drop', e => {
+      const dt = e.dataTransfer;
+      if (dt && dt.files && dt.files.length) {
+        this.handleTaskFilesList(dt.files);
+      }
+    }, false);
+  },
+
   // ================= TASK MODAL =================
   openTask(id, folderId) {
     editTaskId = id || null;
@@ -161,21 +270,91 @@ export const modals = {
     const btnDeleteTaskEl = document.getElementById('btnDeleteTask');
     if (btnDeleteTaskEl) btnDeleteTaskEl.style.display = (t && canUserDeleteTask) ? '' : 'none';
 
-    // Title & Permission Badges
+    // Header Title & Code Badge
+    const codeBadgeEl = document.getElementById('taskModalCodeBadge');
     const titleEl = document.getElementById('taskModalTitle');
+    const badgeContainerEl = document.getElementById('taskModalBadgeContainer');
     if (t) {
-      let badge = '';
-      if (isCurrentTaskReadOnly) {
-        badge = '<span class="badge b-gray" style="font-size:11px;margin-left:6px;vertical-align:middle">👁️ Chỉ xem</span>';
-      } else if (canUserEditTask) {
-        badge = '<span class="badge b-blue" style="font-size:11px;margin-left:6px;vertical-align:middle">✏️ Có quyền sửa</span>';
-      } else if (canUserCompleteTask) {
-        badge = '<span class="badge b-green" style="font-size:11px;margin-left:6px;vertical-align:middle">✓ Người thực hiện</span>';
+      const code = state.CODE[t.id];
+      if (codeBadgeEl) {
+        codeBadgeEl.textContent = code || '';
+        codeBadgeEl.style.display = code ? 'inline-block' : 'none';
       }
-      titleEl.innerHTML = `Đầu việc ${state.CODE[t.id] || ''} ${badge}`;
+      if (titleEl) titleEl.textContent = t.title || 'Công việc';
+      if (badgeContainerEl) {
+        let badge = '';
+        if (isCurrentTaskReadOnly) {
+          badge = '<span class="badge b-gray" style="font-size:11px;margin-left:6px;vertical-align:middle">👁️ Chỉ xem</span>';
+        } else if (canUserEditTask) {
+          badge = '<span class="badge b-blue" style="font-size:11px;margin-left:6px;vertical-align:middle">✏️ Có quyền sửa</span>';
+        } else if (canUserCompleteTask) {
+          badge = '<span class="badge b-green" style="font-size:11px;margin-left:6px;vertical-align:middle">✓ Người thực hiện</span>';
+        }
+        badgeContainerEl.innerHTML = badge;
+      }
     } else {
-      titleEl.textContent = 'Đầu việc mới';
+      if (codeBadgeEl) codeBadgeEl.style.display = 'none';
+      if (titleEl) titleEl.textContent = 'Đầu việc mới';
+      if (badgeContainerEl) badgeContainerEl.innerHTML = '';
     }
+
+    // Quick Info Bar
+    const curP = state.projById(targetProjId);
+    const fs = curP ? (curP.folders || []) : [];
+    const curFld = fs.find(f => f.id === (t ? t.folderId : (folderId && folderId !== '__none' ? folderId : '')));
+
+    const sumProjEl = document.getElementById('t_summary_project');
+    if (sumProjEl) sumProjEl.textContent = curP ? curP.name : 'Chưa thuộc dự án';
+
+    const sumFolderEl = document.getElementById('t_summary_folder');
+    if (sumFolderEl) sumFolderEl.textContent = curFld ? curFld.name : 'Chưa phân loại';
+
+    const sumAssigneesEl = document.getElementById('t_summary_assignees');
+    if (sumAssigneesEl) {
+      sumAssigneesEl.textContent = draftAssignees.length
+        ? draftAssignees.map(a => state.fullName(a) || a).join(', ')
+        : 'Chưa giao';
+    }
+
+    const sumDueEl = document.getElementById('t_summary_due');
+    const progDueBadgeEl = document.getElementById('t_prog_due_badge');
+    if (t && t.dueDate) {
+      const dueStr = state.fmtDate(t.dueDate);
+      const days = state.dueDays(t.dueDate);
+      let statusText = '';
+      let badgeClass = 'badge b-gray';
+      if (t.status === 'done') {
+        statusText = '✓ Đã hoàn thành';
+        badgeClass = 'badge b-green';
+      } else if (days < 0) {
+        statusText = `⚠️ Quá hạn ${Math.abs(days)} ngày`;
+        badgeClass = 'badge b-red';
+      } else if (days === 0) {
+        statusText = '⚡ Hạn hôm nay!';
+        badgeClass = 'badge b-orange';
+      } else {
+        statusText = `⏳ Còn ${days} ngày`;
+        badgeClass = 'badge b-blue';
+      }
+      if (sumDueEl) sumDueEl.innerHTML = `<b>${dueStr}</b> <span class="${badgeClass}" style="font-size:10px;margin-left:4px">${statusText}</span>`;
+      if (progDueBadgeEl) {
+        progDueBadgeEl.textContent = statusText;
+        progDueBadgeEl.className = badgeClass;
+        progDueBadgeEl.style.display = 'inline-block';
+      }
+    } else {
+      if (sumDueEl) sumDueEl.textContent = 'Không có hạn chót';
+      if (progDueBadgeEl) progDueBadgeEl.style.display = 'none';
+    }
+
+    // Sync note view card
+    this.onTaskNoteInput();
+
+    // Default tab: Progress & Content for existing tasks, Settings for new task
+    this.switchTaskTab(t ? 'progress' : 'settings');
+
+    // Setup drag and drop for files/photos
+    this.setupTaskUploadDropzone();
 
     openModalEl('modalTask');
     if (!t) setTimeout(() => document.getElementById('t_title').focus(), 50);
@@ -571,18 +750,77 @@ export const modals = {
   },
 
   renderTaskFiles() {
-    const container = document.getElementById('t_files_list');
-    if (!container) return;
-    container.innerHTML = taskFileCtx.files.map((f, i) => `
-      <div class="file">
-        <span class="ficon">📎</span>
-        <div class="fbody">
-          <a href="${state.esc(f.url)}" target="_blank" rel="noopener">${state.esc(f.name)}</a>
-          <span class="small">${fmtFileSize(f.size)}</span>
-        </div>
-        ${!isCurrentTaskReadOnly ? `<button class="ibtn" title="Gỡ tệp" onclick="window.app.removeTaskFile(${i})">✕</button>` : ''}
-      </div>
-    `).join('') || '<span class="small" style="color:var(--text-muted)">Chưa có tệp đính kèm</span>';
+    const files = taskFileCtx.files || [];
+    const images = files.filter(isImageFile);
+    const docs = files.filter(f => !isImageFile(f));
+
+    // Update Counts
+    const imgCountEl = document.getElementById('t_images_count');
+    if (imgCountEl) imgCountEl.textContent = `${images.length} ảnh`;
+
+    const docCountEl = document.getElementById('t_docs_count');
+    if (docCountEl) docCountEl.textContent = `${docs.length} tệp`;
+
+    // Render Image Gallery
+    const galleryEl = document.getElementById('t_images_gallery');
+    if (galleryEl) {
+      if (!images.length) {
+        galleryEl.innerHTML = '<div class="gallery-empty-state">🖼️ Chưa có hình ảnh nào được tải lên cho công việc này.</div>';
+      } else {
+        galleryEl.innerHTML = images.map(img => {
+          const origIndex = files.indexOf(img);
+          return `
+            <div class="task-img-card" onclick="window.app.openLightbox('${state.esc(img.url)}', '${state.esc(img.name)}', '${fmtFileSize(img.size)}')">
+              <div class="task-img-thumb-wrap">
+                <img src="${state.esc(img.url)}" alt="${state.esc(img.name)}" loading="lazy">
+                <div class="task-img-overlay">
+                  <span class="task-img-zoom-icon" title="Xem phóng to">🔍</span>
+                </div>
+              </div>
+              <div class="task-img-meta">
+                <span class="task-img-name" title="${state.esc(img.name)}">${state.esc(img.name)}</span>
+                <span class="task-img-size">${fmtFileSize(img.size)}</span>
+              </div>
+              ${!isCurrentTaskReadOnly ? `<button type="button" class="ibtn task-file-del-btn" title="Gỡ ảnh này" onclick="event.stopPropagation(); window.app.removeTaskFile(${origIndex})">✕</button>` : ''}
+            </div>
+          `;
+        }).join('');
+      }
+    }
+
+    // Render Documents List
+    const docsEl = document.getElementById('t_docs_list');
+    if (docsEl) {
+      if (!docs.length) {
+        docsEl.innerHTML = '<div class="small" style="color:var(--text-muted);padding:8px 4px">Chưa có tài liệu đính kèm.</div>';
+      } else {
+        docsEl.innerHTML = docs.map(doc => {
+          const origIndex = files.indexOf(doc);
+          const cat = getFileCategory(doc);
+          return `
+            <div class="task-doc-card">
+              <div class="task-doc-icon-badge" style="background:${cat.bg};color:${cat.color}">
+                ${cat.icon}
+              </div>
+              <div class="task-doc-info">
+                <a href="${state.esc(doc.url)}" target="_blank" rel="noopener" class="task-doc-name" title="${state.esc(doc.name)}">
+                  ${state.esc(doc.name)}
+                </a>
+                <div class="task-doc-meta">
+                  <span>${cat.label}</span> • <span>${fmtFileSize(doc.size)}</span>
+                  ${doc.by ? ` • <span>Đăng bởi ${state.shortName(doc.by)}</span>` : ''}
+                </div>
+              </div>
+              <div class="task-doc-actions">
+                <a href="${state.esc(doc.url)}" download="${state.esc(doc.name)}" class="btn small-btn" title="Tải tệp này về máy">⬇️ Tải</a>
+                <a href="${state.esc(doc.url)}" target="_blank" rel="noopener" class="btn small-btn" title="Mở trong tab mới">👁️ Xem</a>
+                ${!isCurrentTaskReadOnly ? `<button type="button" class="ibtn" title="Gỡ tệp này" onclick="window.app.removeTaskFile(${origIndex})" style="color:var(--text-muted)">✕</button>` : ''}
+              </div>
+            </div>
+          `;
+        }).join('');
+      }
+    }
   },
 
   removeTaskFile(index) {
@@ -591,15 +829,14 @@ export const modals = {
     this.renderTaskFiles();
   },
 
-  async handleTaskFileUpload(input) {
-    const files = [...input.files];
-    input.value = '';
+  async handleTaskFilesList(filesList) {
+    const files = [...filesList];
     if (!files.length) return;
 
     const statusEl = document.getElementById('t_upload_status');
     for (const file of files) {
       try {
-        statusEl.textContent = `⏳ Đang tải ${file.name}…`;
+        if (statusEl) statusEl.textContent = `⏳ Đang tải ${file.name}…`;
         const uploadedMeta = await api.uploadFile(file);
         taskFileCtx.files.push(uploadedMeta);
         taskFileCtx.added.push(uploadedMeta.id);
@@ -608,7 +845,14 @@ export const modals = {
         alert('Lỗi tải tệp: ' + err.message);
       }
     }
-    statusEl.textContent = '';
+    if (statusEl) statusEl.textContent = '';
+  },
+
+  async handleTaskFileUpload(input) {
+    const files = [...input.files];
+    input.value = '';
+    if (!files.length) return;
+    await this.handleTaskFilesList(files);
   },
 
   // ================= PROJECT MODAL =================

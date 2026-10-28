@@ -17,11 +17,11 @@
   <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
 
   <!-- Modular CSS Design System -->
-  <link rel="stylesheet" href="css/variables.css?v=20261028">
-  <link rel="stylesheet" href="css/base.css?v=20261028">
-  <link rel="stylesheet" href="css/components.css?v=20261028">
-  <link rel="stylesheet" href="css/layout.css?v=20261028">
-  <link rel="stylesheet" href="css/animations.css?v=20261028">
+  <link rel="stylesheet" href="css/variables.css?v=20261028_v2">
+  <link rel="stylesheet" href="css/base.css?v=20261028_v2">
+  <link rel="stylesheet" href="css/components.css?v=20261028_v2">
+  <link rel="stylesheet" href="css/layout.css?v=20261028_v2">
+  <link rel="stylesheet" href="css/animations.css?v=20261028_v2">
 </head>
 <body>
 
@@ -100,132 +100,225 @@
 
   <!-- ================= MODAL: TASK (CÔNG VIỆC) ================= -->
   <div class="modal-bg" id="modalTask" onclick="if(event.target===this)window.app.closeTaskModal()">
-    <div class="modal" role="dialog" aria-labelledby="taskModalTitle">
-      <h2 id="taskModalTitle">Công việc</h2>
+    <div class="modal modal-task-container" role="dialog" aria-labelledby="taskModalTitle">
+      <div class="task-modal-header-top">
+        <div class="task-modal-title-wrap">
+          <span id="taskModalCodeBadge" class="task-code-badge" style="display:none"></span>
+          <h2 id="taskModalTitle" style="margin:0;font-size:18px;display:inline-block">Công việc</h2>
+          <span id="taskModalBadgeContainer"></span>
+        </div>
+        <button type="button" class="ibtn modal-close-corner-btn" onclick="window.app.closeTaskModal()" title="Đóng">✕</button>
+      </div>
 
       <!-- Thông báo khi ở Chế độ Chỉ xem (không thể can thiệp vào task của người khác) -->
       <div id="taskReadOnlyNotice" class="task-readonly-notice" style="display:none"></div>
 
-      <div class="field">
-        <label for="t_title">Tên công việc *</label>
-        <input id="t_title" placeholder="Nhập tiêu đề công việc…">
+      <!-- Tiêu đề công việc -->
+      <div class="field" style="margin-top:10px;margin-bottom:12px">
+        <label for="t_title" style="font-weight:600">Tiêu đề công việc *</label>
+        <input id="t_title" placeholder="Nhập tiêu đề công việc…" style="font-size:15px;font-weight:600">
       </div>
 
-      <div class="form-grid-2col">
-        <div class="field">
-          <label for="t_project">Dự án</label>
-          <select id="t_project" onchange="window.app.fillFolders('')"></select>
+      <!-- Thanh tóm tắt thông tin nhanh (Quick Info Bar) -->
+      <div class="task-quick-info-bar">
+        <div class="info-pill" title="Dự án">
+          <span class="pill-label">📁 Dự án:</span>
+          <b id="t_summary_project" class="pill-val">—</b>
         </div>
-        <div class="field">
-          <label for="t_folder">Hạng mục</label>
-          <select id="t_folder"></select>
+        <div class="info-pill" title="Hạng mục">
+          <span class="pill-label">📂 Hạng mục:</span>
+          <span id="t_summary_folder" class="pill-val">—</span>
         </div>
-        <div class="field">
-          <label for="t_assigner">Người giao</label>
-          <select id="t_assigner"></select>
+        <div class="info-pill" title="Người nhận việc">
+          <span class="pill-label">👥 Người làm:</span>
+          <b id="t_summary_assignees" class="pill-val">—</b>
         </div>
-        <div class="field">
-          <label for="t_status">Trạng thái</label>
-          <select id="t_status" onchange="window.app.onTaskStatusChange()">
-            <option value="todo">Chưa làm</option>
-            <option value="doing">Đang làm</option>
-            <option value="done">Hoàn thành</option>
-          </select>
+        <div class="info-pill" title="Hạn chót & Tiến độ thời gian">
+          <span class="pill-label">📅 Hạn:</span>
+          <span id="t_summary_due" class="pill-val">—</span>
         </div>
-        <div class="field" style="grid-column: 1 / -1">
-          <label>Người nhận việc <span class="small" style="color:var(--text-muted)">(Có thể giao cho 1 hoặc nhiều người cùng thực hiện)</span></label>
-          <div class="assignee-select-wrap">
-            <div id="t_assignees_selected" class="assignee-chips"></div>
-            <div class="assignee-picker-row">
-              <select id="t_assignee_picker" onchange="window.app.addAssigneeFromPicker(this.value); this.value='';">
-                <option value="">+ Chọn người nhận việc…</option>
-              </select>
+      </div>
+
+      <!-- Navigation Tabs -->
+      <div class="task-modal-tabs">
+        <button type="button" id="tabBtnTaskProgress" class="task-tab-btn active" onclick="window.app.switchTaskTab('progress')">
+          📊 Tiến độ, Ghi chú & Tệp đính kèm
+        </button>
+        <button type="button" id="tabBtnTaskSettings" class="task-tab-btn" onclick="window.app.switchTaskTab('settings')">
+          ⚙️ Phân công & Thiết lập chi tiết
+        </button>
+      </div>
+
+      <!-- TAB 1: TIẾN ĐỘ, GHI CHÚ & TỆP ĐÍNH KÈM (MẶC ĐỊNH KHI XEM) -->
+      <div id="taskPaneProgress" class="task-tab-pane active">
+        <!-- 1. TIẾN ĐỘ THỰC HIỆN CHI TIẾT & CHECKLIST -->
+        <div class="detailed-progress-card">
+          <div class="detailed-progress-header">
+            <div class="prog-badge-wrap">
+              <span class="prog-large-val" id="t_progress_val">0%</span>
+              <span class="prog-status-tag" id="t_prog_status_tag">⏳ Chưa bắt đầu</span>
             </div>
-            <input type="hidden" id="t_assignee" value="">
+            <div class="prog-summary-text" id="t_prog_summary_text">Chưa có bước thực hiện</div>
+            <span id="t_prog_due_badge" class="badge b-gray" style="font-size:11px"></span>
+            <span style="flex:1"></span>
+            <div class="prog-quick-btns" id="t_prog_quick_btns">
+              <button type="button" class="btn small-btn" onclick="window.app.setTaskProgressQuick(25)">25%</button>
+              <button type="button" class="btn small-btn" onclick="window.app.setTaskProgressQuick(50)">50%</button>
+              <button type="button" class="btn small-btn" onclick="window.app.setTaskProgressQuick(75)">75%</button>
+              <button type="button" class="btn small-btn primary" onclick="window.app.setTaskProgressQuick(100)">✓ Hoàn thành</button>
+            </div>
+          </div>
+
+          <div class="prog-bar-lg">
+            <div class="prog-bar-lg-fill" id="t_progress_bar_fill" style="width:0%"></div>
+          </div>
+
+          <div class="field" style="margin-top:10px;margin-bottom:8px">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+              <label for="t_progress" style="margin:0;font-size:12px;color:var(--text-secondary)">Điều chỉnh tiến độ hoàn thành:</label>
+              <span class="small" style="color:var(--text-muted)">Kéo thanh trượt để thay đổi %</span>
+            </div>
+            <input type="range" id="t_progress" min="0" max="100" step="5" oninput="window.app.onTaskProgressInput()">
+          </div>
+
+          <!-- Checklist các bước hoàn thành chi tiết -->
+          <div class="checklist-box">
+            <div class="checklist-header">
+              <span class="checklist-title">📋 <b>Các bước thực hiện chi tiết</b> <span id="t_checklist_count" class="badge b-gray" style="font-size:11px">0/0</span></span>
+            </div>
+            <div id="t_checklist_list" class="checklist-items-list"></div>
+            <div class="checklist-add-row" id="t_checklist_add_wrap" style="display:flex;gap:6px;margin-top:8px">
+              <input type="text" id="t_new_checklist_title" placeholder="+ Nhập bước thực hiện mới rồi nhấn Enter…" style="flex:1;font-size:var(--font-xs);padding:6px 10px" onkeydown="if(event.key==='Enter'){event.preventDefault();window.app.addChecklistItemFromInput();}">
+              <button type="button" class="btn small-btn primary" id="btnAddChecklistBtn" onclick="window.app.addChecklistItemFromInput()">+ Thêm bước</button>
+            </div>
           </div>
         </div>
-        <div class="field">
-          <label for="t_priority">Mức ưu tiên</label>
-          <select id="t_priority">
-            <option value="low">Thấp</option>
-            <option value="med">Trung bình</option>
-            <option value="high">Cao</option>
-          </select>
+
+        <!-- 2. GHI CHÚ & CHI TIẾT CÔNG VIỆC -->
+        <div class="task-section-box">
+          <div class="task-section-header">
+            <span class="task-section-title">📝 <b>Ghi chú & Hướng dẫn thực hiện</b></span>
+            <span class="small" style="color:var(--text-muted)">Nội dung ghi chú, trao đổi và bàn giao</span>
+          </div>
+          <!-- View card hiển thị rõ ràng nội dung -->
+          <div id="t_note_view" class="task-note-view-box"></div>
+          <!-- Textarea cho phép chỉnh sửa -->
+          <div id="t_note_edit_wrap" style="margin-top:8px">
+            <textarea id="t_note" rows="3" placeholder="Nhập ghi chú yêu cầu, liên hệ, kết quả công việc…" oninput="window.app.onTaskNoteInput()"></textarea>
+          </div>
         </div>
-        <div class="field">
-          <label for="t_start">Ngày bắt đầu</label>
-          <input type="date" id="t_start">
+
+        <!-- 3. HÌNH ẢNH ĐÃ TẢI LÊN (PHOTO GALLERY) -->
+        <div class="task-section-box">
+          <div class="task-section-header">
+            <span class="task-section-title">🖼️ <b>Hình ảnh đã tải lên</b> <span id="t_images_count" class="badge b-blue" style="font-size:11px">0 ảnh</span></span>
+            <span class="small" style="color:var(--text-muted)">Bấm vào ảnh để xem kích thước gốc phóng to</span>
+          </div>
+          <div id="t_images_gallery" class="task-gallery-grid"></div>
         </div>
-        <div class="field">
-          <label for="t_due">Hạn chót</label>
-          <input type="date" id="t_due">
+
+        <!-- 4. TÀI LIỆU & TỆP ĐÍNH KÈM KHÁC -->
+        <div class="task-section-box">
+          <div class="task-section-header">
+            <span class="task-section-title">📁 <b>Tài liệu & Tệp đính kèm</b> <span id="t_docs_count" class="badge b-gray" style="font-size:11px">0 tệp</span></span>
+          </div>
+          <div id="t_docs_list" class="task-docs-list"></div>
+        </div>
+
+        <!-- 5. TẢI TỆP / ẢNH MỚI LÊN -->
+        <div id="t_upload_wrap" class="task-upload-section" style="margin-top:10px">
+          <div id="t_upload_dropzone" class="task-dropzone" onclick="document.getElementById('t_file_input').click()">
+            <span class="dropzone-icon">☁️</span>
+            <div class="dropzone-text">
+              <b>Tải ảnh hoặc tài liệu đính kèm</b>
+              <div class="small" style="color:var(--text-muted)">Bấm để chọn tệp từ máy tính (hỗ trợ JPG, PNG, WEBP, PDF, Excel, Word, ZIP…)</div>
+            </div>
+            <input type="file" id="t_file_input" multiple hidden onchange="window.app.handleTaskFileUpload(this)">
+          </div>
+          <div id="t_upload_status" class="upload-status-text"></div>
         </div>
       </div>
 
-      <!-- TIẾN ĐỘ THỰC HIỆN CHI TIẾT & CHECKLIST -->
-      <div class="detailed-progress-card">
-        <div class="detailed-progress-header">
-          <div class="prog-badge-wrap">
-            <span class="prog-large-val" id="t_progress_val">0%</span>
-            <span class="prog-status-tag" id="t_prog_status_tag">Chưa bắt đầu</span>
+      <!-- TAB 2: THIẾT LẬP & PHÂN CÔNG -->
+      <div id="taskPaneSettings" class="task-tab-pane" style="display:none">
+        <div class="form-grid-2col" style="margin-top:10px">
+          <div class="field">
+            <label for="t_project">Dự án</label>
+            <select id="t_project" onchange="window.app.fillFolders('')"></select>
           </div>
-          <div class="prog-summary-text" id="t_prog_summary_text">Chưa có bước thực hiện</div>
-          <span style="flex:1"></span>
-          <div class="prog-quick-btns" id="t_prog_quick_btns">
-            <button type="button" class="btn small-btn" onclick="window.app.setTaskProgressQuick(25)">25%</button>
-            <button type="button" class="btn small-btn" onclick="window.app.setTaskProgressQuick(50)">50%</button>
-            <button type="button" class="btn small-btn" onclick="window.app.setTaskProgressQuick(75)">75%</button>
-            <button type="button" class="btn small-btn primary" onclick="window.app.setTaskProgressQuick(100)">✓ Hoàn thành</button>
+          <div class="field">
+            <label for="t_folder">Hạng mục</label>
+            <select id="t_folder"></select>
           </div>
-        </div>
-
-        <div class="prog-bar-lg">
-          <div class="prog-bar-lg-fill" id="t_progress_bar_fill" style="width:0%"></div>
-        </div>
-
-        <div class="field" style="margin-top:12px;margin-bottom:8px">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
-            <label for="t_progress" style="margin:0">Thanh trượt điều chỉnh tiến độ linh hoạt:</label>
-            <span class="small" style="color:var(--text-muted)">Kéo thanh trượt để điều chỉnh thủ công</span>
+          <div class="field">
+            <label for="t_assigner">Người giao</label>
+            <select id="t_assigner"></select>
           </div>
-          <input type="range" id="t_progress" min="0" max="100" step="5" oninput="window.app.onTaskProgressInput()">
-        </div>
-
-        <!-- Checklist các bước hoàn thành chi tiết -->
-        <div class="checklist-box">
-          <div class="checklist-header">
-            <span class="checklist-title">📋 <b>Các bước thực hiện chi tiết</b> <span id="t_checklist_count" class="badge b-gray" style="font-size:11px">0/0</span></span>
+          <div class="field">
+            <label for="t_status">Trạng thái</label>
+            <select id="t_status" onchange="window.app.onTaskStatusChange()">
+              <option value="todo">Chưa làm</option>
+              <option value="doing">Đang làm</option>
+              <option value="done">Hoàn thành</option>
+            </select>
           </div>
-          <div id="t_checklist_list" class="checklist-items-list"></div>
-          <div class="checklist-add-row" id="t_checklist_add_wrap" style="display:flex;gap:6px;margin-top:8px">
-            <input type="text" id="t_new_checklist_title" placeholder="+ Nhập bước thực hiện mới rồi nhấn Enter…" style="flex:1;font-size:var(--font-xs);padding:6px 10px" onkeydown="if(event.key==='Enter'){event.preventDefault();window.app.addChecklistItemFromInput();}">
-            <button type="button" class="btn small-btn primary" id="btnAddChecklistBtn" onclick="window.app.addChecklistItemFromInput()">+ Thêm bước</button>
+          <div class="field" style="grid-column: 1 / -1">
+            <label>Người nhận việc <span class="small" style="color:var(--text-muted)">(Có thể giao cho 1 hoặc nhiều người cùng thực hiện)</span></label>
+            <div class="assignee-select-wrap">
+              <div id="t_assignees_selected" class="assignee-chips"></div>
+              <div class="assignee-picker-row">
+                <select id="t_assignee_picker" onchange="window.app.addAssigneeFromPicker(this.value); this.value='';">
+                  <option value="">+ Chọn người nhận việc…</option>
+                </select>
+              </div>
+              <input type="hidden" id="t_assignee" value="">
+            </div>
           </div>
-        </div>
-      </div>
-
-      <div class="field">
-        <label for="t_note">Ghi chú & Chi tiết</label>
-        <textarea id="t_note" rows="3" placeholder="Chi tiết yêu cầu, liên hệ, kết quả bàn giao…"></textarea>
-      </div>
-
-      <div class="field">
-        <label>Tệp đính kèm & Hình ảnh</label>
-        <div class="files" id="t_files_list"></div>
-        <div id="t_upload_wrap" style="display:flex;align-items:center;gap:8px;margin-top:4px">
-          <label class="btn" style="display:inline-flex">
-            📎 Thêm tệp / ảnh
-            <input type="file" multiple hidden onchange="window.app.handleTaskFileUpload(this)">
-          </label>
-          <span class="small" id="t_upload_status" style="color:var(--pri-500)"></span>
+          <div class="field">
+            <label for="t_priority">Mức ưu tiên</label>
+            <select id="t_priority">
+              <option value="low">Thấp</option>
+              <option value="med">Trung bình</option>
+              <option value="high">Cao</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="t_start">Ngày bắt đầu</label>
+            <input type="date" id="t_start">
+          </div>
+          <div class="field">
+            <label for="t_due">Hạn chót</label>
+            <input type="date" id="t_due">
+          </div>
         </div>
       </div>
 
-      <div class="modal-actions">
+      <div class="modal-actions" style="margin-top:16px">
         <button class="btn danger" id="btnDeleteTask" onclick="window.app.deleteTaskModal()">Xoá</button>
         <span style="flex:1"></span>
         <button class="btn" onclick="window.app.closeTaskModal()">Đóng</button>
         <button class="btn primary" id="btnSaveTask" onclick="window.app.saveTaskModal()">Lưu công việc</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= MODAL: LIGHTBOX (XEM ẢNH PHÓNG TO) ================= -->
+  <div class="modal-bg modal-lightbox-bg" id="modalLightbox" onclick="if(event.target===this)window.app.closeLightbox()">
+    <div class="lightbox-container" role="dialog" aria-label="Xem ảnh phóng to">
+      <div class="lightbox-header">
+        <div class="lightbox-title-wrap">
+          <span class="lightbox-icon">🖼️</span>
+          <span class="lightbox-filename" id="lightboxFileName">image.jpg</span>
+          <span class="lightbox-filesize" id="lightboxFileSize"></span>
+        </div>
+        <div class="lightbox-actions">
+          <a id="lightboxDownloadBtn" class="btn small-btn" download target="_blank" rel="noopener">⬇️ Tải về</a>
+          <a id="lightboxOpenNewTabBtn" class="btn small-btn" target="_blank" rel="noopener">🔍 Xem gốc</a>
+          <button type="button" class="ibtn lightbox-close-btn" onclick="window.app.closeLightbox()" title="Đóng (Esc)">✕</button>
+        </div>
+      </div>
+      <div class="lightbox-body">
+        <img id="lightboxImg" src="" alt="Hình ảnh phóng to" class="lightbox-img">
       </div>
     </div>
   </div>
@@ -1084,6 +1177,6 @@
   </div>
 
   <!-- Main ES Module Entry Point -->
-  <script type="module" src="js/app.js"></script>
+  <script type="module" src="js/app.js?v=20261028_v2"></script>
 </body>
 </html>

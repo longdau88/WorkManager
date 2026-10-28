@@ -74,7 +74,7 @@ class App {
     document.addEventListener('keydown', e => {
       if (e.key === 'Escape') {
         [
-          'modalTask', 'modalProject', 'modalSettings', 'modalProjectPermissions',
+          'modalTask', 'modalProject', 'modalSettings', 'modalProjectPermissions', 'modalLightbox',
           'modalDiary', 'modalLedger', 'modalWorker', 'modalAdvance', 'modalContract',
           'modalDevice', 'modalCheck', 'modalIssue', 'modalReceipt', 'modalGuarantee'
         ].forEach(id => closeModalEl(id));
@@ -268,6 +268,10 @@ class App {
   closeTaskModal() { closeModalEl('modalTask'); }
   saveTaskModal() { modals.saveTask(); }
   deleteTaskModal() { modals.deleteTask(); }
+  switchTaskTab(tab) { modals.switchTaskTab(tab); }
+  onTaskNoteInput() { modals.onTaskNoteInput(); }
+  openLightbox(url, name, size) { modals.openLightbox(url, name, size); }
+  closeLightbox() { modals.closeLightbox(); }
   fillFolders(folderId) { modals.fillFolders(folderId); }
   onTaskProgressInput() { modals.onProgressInput(); }
   onTaskStatusChange() { modals.onStatusChange(); }
