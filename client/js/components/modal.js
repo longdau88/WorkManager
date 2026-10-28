@@ -621,6 +621,21 @@ export const modals = {
     document.getElementById('p_due').value = p ? (p.dueDate || '') : '';
     document.getElementById('p_note').value = p ? (p.note || '') : '';
 
+    const stageEl = document.getElementById('p_stage');
+    if (stageEl) stageEl.value = p ? (p.stage || 'doing') : 'planning';
+
+    const groupSel = document.getElementById('p_group');
+    if (groupSel) {
+      groupSel.innerHTML = '<option value="">— Chưa phân nhóm —</option>' +
+        (state.data.groups || []).map(g => `<option value="${g.id}" ${p && p.groupId === g.id ? 'selected' : ''}>${state.esc(g.name)}</option>`).join('');
+    }
+
+    const cvEl = document.getElementById('p_contractValue');
+    if (cvEl) cvEl.value = p && p.contractValue ? state.money(p.contractValue) : '';
+
+    const retEl = document.getElementById('p_retentionPct');
+    if (retEl) retEl.value = p && p.retentionPct !== undefined ? p.retentionPct : 5;
+
     selColor = p ? (p.color || CONFIG.DEFAULT_COLOR) : CONFIG.COLORS[state.data.projects.length % CONFIG.COLORS.length];
     this.renderColorSwatches();
 
@@ -786,9 +801,20 @@ export const modals = {
     const old = editProjId ? state.projById(editProjId) : null;
     const folders = draftFolders.map(f => ({ id: f.id, name: f.name.trim() })).filter(f => f.name);
 
+    const stageVal = document.getElementById('p_stage') ? document.getElementById('p_stage').value : (old ? old.stage : 'doing');
+    const groupVal = document.getElementById('p_group') ? document.getElementById('p_group').value : (old ? old.groupId : '');
+    const cvInput = document.getElementById('p_contractValue');
+    const contractVal = cvInput ? (parseFloat(cvInput.value.replace(/[^\d]/g, '')) || 0) : (old ? old.contractValue : 0);
+    const retInput = document.getElementById('p_retentionPct');
+    const retVal = retInput ? (parseFloat(retInput.value) || 5) : (old ? old.retentionPct : 5);
+
     const record = Object.assign({ id: state.uid(), createdAt: Date.now(), deleted: false }, old || {}, {
       name,
       color: selColor,
+      stage: stageVal,
+      groupId: groupVal,
+      contractValue: contractVal,
+      retentionPct: retVal,
       dueDate: document.getElementById('p_due').value,
       note: document.getElementById('p_note').value,
       info: this.collectProjectInfo(old && old.info),
@@ -910,22 +936,135 @@ export const modals = {
     const tabUsersEl = document.getElementById('tabSetUsers');
     const tabRolesEl = document.getElementById('tabSetRoles');
     const tabFieldsEl = document.getElementById('tabSetFields');
+    const tabGroupsEl = document.getElementById('tabSetGroups');
+    const tabCategoriesEl = document.getElementById('tabSetCategories');
 
     if (tabUsersEl) tabUsersEl.classList.toggle('active', tab === 'users');
     if (tabRolesEl) tabRolesEl.classList.toggle('active', tab === 'roles');
     if (tabFieldsEl) tabFieldsEl.classList.toggle('active', tab === 'fields');
+    if (tabGroupsEl) tabGroupsEl.classList.toggle('active', tab === 'groups');
+    if (tabCategoriesEl) tabCategoriesEl.classList.toggle('active', tab === 'categories');
 
     const paneUsersEl = document.getElementById('paneSetUsers');
     const paneRolesEl = document.getElementById('paneSetRoles');
     const paneFieldsEl = document.getElementById('paneSetFields');
+    const paneGroupsEl = document.getElementById('paneSetGroups');
+    const paneCategoriesEl = document.getElementById('paneSetCategories');
 
     if (paneUsersEl) paneUsersEl.style.display = tab === 'users' ? '' : 'none';
     if (paneRolesEl) paneRolesEl.style.display = tab === 'roles' ? '' : 'none';
     if (paneFieldsEl) paneFieldsEl.style.display = tab === 'fields' ? '' : 'none';
+    if (paneGroupsEl) paneGroupsEl.style.display = tab === 'groups' ? '' : 'none';
+    if (paneCategoriesEl) paneCategoriesEl.style.display = tab === 'categories' ? '' : 'none';
 
     if (tab === 'users') this.renderUsersTab();
     else if (tab === 'roles') this.renderRolesTab();
     else if (tab === 'fields') this.renderFieldsTab();
+    else if (tab === 'groups') this.renderGroupsTab();
+    else if (tab === 'categories') this.renderCategoriesTab();
+  },
+
+  renderGroupsTab() {
+    const container = document.getElementById('groupsTableWrap');
+    if (!container) return;
+    const groups = state.data.groups || [];
+    container.innerHTML = `
+      <div class="tbl-wrap">
+        <table class="tbl">
+          <thead><tr><th>Tên nhóm dự án</th><th class="num">Số dự án</th><th></th></tr></thead>
+          <tbody>
+            ${groups.map(g => {
+              const n = state.data.projects.filter(p => p.groupId === g.id).length;
+              return `
+                <tr>
+                  <td><b>${state.esc(g.name)}</b></td>
+                  <td class="num">${n}</td>
+                  <td style="text-align:right">
+                    <button class="ibtn danger" onclick="window.app.deleteGroup('${g.id}')">✕</button>
+                  </td>
+                </tr>
+              `;
+            }).join('')}
+          </tbody>
+        </table>
+      </div>
+    `;
+  },
+
+  addNewGroup() {
+    const input = document.getElementById('newGroupName');
+    const name = input ? input.value.trim() : '';
+    if (!name) return;
+    state.commit('pgroup', {
+      id: state.uid(),
+      name,
+      sort: (state.data.groups.length + 1) * 10,
+      createdAt: Date.now(),
+      deleted: false
+    });
+    if (input) input.value = '';
+    this.renderGroupsTab();
+  },
+
+  deleteGroup(id) {
+    const g = state.data.groups.find(x => x.id === id);
+    if (!g || !confirm(`Xoá nhóm dự án "${g.name}"?`)) return;
+    state.commit('pgroup', { ...g, deleted: true });
+    this.renderGroupsTab();
+  },
+
+  renderCategoriesTab() {
+    const container = document.getElementById('categoriesTableWrap');
+    if (!container) return;
+    const cats = state.sortedCats();
+    container.innerHTML = `
+      <div class="tbl-wrap">
+        <table class="tbl">
+          <thead><tr><th>Tên danh mục</th><th>Loại dùng</th><th class="num">Số phiếu</th><th></th></tr></thead>
+          <tbody>
+            ${cats.map(c => {
+              const n = state.data.ledger.filter(l => l.categoryId === c.id).length;
+              const kindLabel = c.kind === 'chi' ? 'Chi' : c.kind === 'nhan' ? 'Nhận' : 'Cả hai';
+              return `
+                <tr>
+                  <td><b>${state.esc(c.name)}</b></td>
+                  <td><span class="badge ${c.kind === 'chi' ? 'b-red' : c.kind === 'nhan' ? 'b-green' : 'b-blue'}">${kindLabel}</span></td>
+                  <td class="num">${n}</td>
+                  <td style="text-align:right">
+                    <button class="ibtn danger" onclick="window.app.deleteCategory('${c.id}')">✕</button>
+                  </td>
+                </tr>
+              `;
+            }).join('')}
+          </tbody>
+        </table>
+      </div>
+    `;
+  },
+
+  addNewCategory() {
+    const nameInput = document.getElementById('newCatName');
+    const kindSelect = document.getElementById('newCatKind');
+    const name = nameInput ? nameInput.value.trim() : '';
+    const kind = kindSelect ? kindSelect.value : 'chi';
+    if (!name) return;
+    state.commit('category', {
+      id: state.uid(),
+      name,
+      kind,
+      sort: (state.data.categories.length + 1) * 10,
+      createdAt: Date.now(),
+      deleted: false
+    });
+    if (nameInput) nameInput.value = '';
+    this.renderCategoriesTab();
+  },
+
+  deleteCategory(id) {
+    const c = state.data.categories.find(x => x.id === id);
+    if (!c || !confirm(`Xoá danh mục thu chi "${c.name}"?`)) return;
+    state.commit('category', { ...c, deleted: true });
+    this.renderCategoriesTab();
   },
 
   renderFieldsTab() {

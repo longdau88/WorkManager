@@ -13,6 +13,8 @@
 
   <!-- SortableJS for Drag-and-Drop -->
   <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
+  <!-- QRCode Generator -->
+  <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
 
   <!-- Modular CSS Design System -->
   <link rel="stylesheet" href="css/variables.css">
@@ -61,25 +63,29 @@
 
     <!-- Main Workspace -->
     <main>
-      <!-- Page 1: Tasks Management -->
+      <!-- Page 1: Tasks & Construction ERP Modules -->
       <section id="pageTasks">
         <div id="tasksAlert"></div>
         <div id="projectHeader"></div>
+        <div id="projectSubTabs"></div>
+        <div id="pane2" style="display:none"></div>
 
-        <div class="toolbar">
-          <div class="tabs" id="filterTabs"></div>
-          <input id="searchTasks" class="search-input" placeholder="🔍 Tìm công việc, ghi chú, người nhận…" aria-label="Tìm kiếm">
-          <select id="assigneeFilter" class="select-filter select-assignee" aria-label="Lọc theo người nhận"></select>
-          <select id="sortTasks" class="select-filter select-sort" aria-label="Sắp xếp">
-            <option value="manual">Thứ tự thực hiện</option>
-            <option value="due">Hạn chót</option>
-            <option value="priority">Ưu tiên cao</option>
-            <option value="updated">Mới cập nhật</option>
-          </select>
+        <div id="taskPane">
+          <div class="toolbar">
+            <div class="tabs" id="filterTabs"></div>
+            <input id="searchTasks" class="search-input" placeholder="🔍 Tìm công việc, ghi chú, người nhận…" aria-label="Tìm kiếm">
+            <select id="assigneeFilter" class="select-filter select-assignee" aria-label="Lọc theo người nhận"></select>
+            <select id="sortTasks" class="select-filter select-sort" aria-label="Sắp xếp">
+              <option value="manual">Thứ tự thực hiện</option>
+              <option value="due">Hạn chót</option>
+              <option value="priority">Ưu tiên cao</option>
+              <option value="updated">Mới cập nhật</option>
+            </select>
+          </div>
+
+          <div class="small" id="dragHint" style="color:var(--text-muted);margin:-4px 0 10px 4px"></div>
+          <div id="tasksContainer"></div>
         </div>
-
-        <div class="small" id="dragHint" style="color:var(--text-muted);margin:-4px 0 10px 4px"></div>
-        <div id="tasksContainer"></div>
       </section>
 
       <!-- Page 2: Statistics & Reports -->
@@ -89,8 +95,8 @@
     </main>
   </div>
 
-  <!-- Floating Add Task Button -->
-  <button class="fab" id="fabAddTask" onclick="window.app.openTaskModal()" title="Thêm công việc mới">+</button>
+  <!-- Floating Add Button (Dynamic context-aware based on active tab) -->
+  <button class="fab" id="fabAddTask" onclick="window.app.onFabClick()" title="Thêm mới">+</button>
 
   <!-- ================= MODAL: TASK (CÔNG VIỆC) ================= -->
   <div class="modal-bg" id="modalTask" onclick="if(event.target===this)window.app.closeTaskModal()">
@@ -243,6 +249,28 @@
           <label>Màu đại diện</label>
           <div class="swatches" id="colorSwatches"></div>
         </div>
+        <div class="field">
+          <label for="p_stage">Giai đoạn triển khai</label>
+          <select id="p_stage">
+            <option value="planning">Lập kế hoạch / Chuẩn bị</option>
+            <option value="doing">Đang thi công triển khai</option>
+            <option value="acceptance">Nghiệm thu bàn giao</option>
+            <option value="warranty">Bảo hành bảo trì</option>
+            <option value="done">Hoàn thành kết thúc</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="p_group">Nhóm dự án</label>
+          <select id="p_group"></select>
+        </div>
+        <div class="field">
+          <label for="p_contractValue">Giá trị hợp đồng (đ)</label>
+          <input id="p_contractValue" inputmode="numeric" placeholder="VD: 1.500.000.000">
+        </div>
+        <div class="field">
+          <label for="p_retentionPct">Giữ lại bảo hành (%)</label>
+          <input id="p_retentionPct" type="number" step="0.5" placeholder="5" value="5">
+        </div>
       </div>
 
       <div class="field">
@@ -295,6 +323,8 @@
           <span class="tab active" id="tabSetUsers" onclick="window.app.switchSettingsTab('users')">👤 Tài khoản</span>
           <span class="tab" id="tabSetRoles" onclick="window.app.switchSettingsTab('roles')">🛡️ Vai trò & Phân quyền</span>
           <span class="tab" id="tabSetFields" onclick="window.app.switchSettingsTab('fields')">🧾 Trường thông tin dự án</span>
+          <span class="tab" id="tabSetGroups" onclick="window.app.switchSettingsTab('groups')">📁 Nhóm dự án</span>
+          <span class="tab" id="tabSetCategories" onclick="window.app.switchSettingsTab('categories')">💰 Danh mục thu chi</span>
         </div>
       </div>
 
@@ -381,6 +411,31 @@
           <div class="settings-pane-desc">Các trường này tự động xuất hiện trong phần Thông tin khai báo của mọi dự án. Trường kiểu Số được cộng tổng trong Thống kê; kiểu Lựa chọn được đếm số lượng.</div>
           <div id="fieldsTableWrap"></div>
         </div>
+
+        <!-- Tab 4: Nhóm dự án (Project Groups) -->
+        <div id="paneSetGroups" style="display:none">
+          <div class="settings-pane-desc">Phân loại các dự án thành các nhóm/chương trình quản lý (VD: Dự án Camera, Dự án Hạ tầng mạng, Dự án Khối cơ quan...).</div>
+          <div style="display:flex;gap:8px;margin-bottom:12px">
+            <input id="newGroupName" placeholder="Tên nhóm dự án mới…" style="flex:1">
+            <button class="btn primary" onclick="window.app.addNewGroup()">+ Thêm nhóm</button>
+          </div>
+          <div id="groupsTableWrap"></div>
+        </div>
+
+        <!-- Tab 5: Danh mục thu chi (Categories) -->
+        <div id="paneSetCategories" style="display:none">
+          <div class="settings-pane-desc">Danh mục dùng cho các phiếu Thu / Chi trong Sổ quỹ dự án (VD: Vật tư, Tiếp khách, Nhân công, Vận chuyển...).</div>
+          <div style="display:flex;gap:8px;margin-bottom:12px">
+            <input id="newCatName" placeholder="Tên danh mục thu chi mới…" style="flex:1">
+            <select id="newCatKind" style="width:auto">
+              <option value="chi">Chi</option>
+              <option value="nhan">Nhận</option>
+              <option value="ca2">Cả hai</option>
+            </select>
+            <button class="btn primary" onclick="window.app.addNewCategory()">+ Thêm danh mục</button>
+          </div>
+          <div id="categoriesTableWrap"></div>
+        </div>
       </div>
 
       <div class="modal-footer">
@@ -416,17 +471,597 @@
     </div>
   </div>
 
-  <!-- ================= MODAL: PROJECT PERMISSIONS (PHÂN QUYỀN DỰ ÁN) ================= -->
-  <div class="modal-bg" id="modalProjectPermissions" onclick="if(event.target===this)window.app.closeProjectPermissionsModal()">
-    <div class="modal wide" role="dialog" aria-labelledby="projPermTitle" style="max-width:840px">
-      <h2 id="projPermTitle">🔒 Phân quyền dự án</h2>
+  <!-- Print Area for QR Code Labels -->
+  <div id="printArea"></div>
 
-      <div id="projPermTableWrap"></div>
+  <!-- ================= MODAL: DIARY (NHẬT KÝ CÔNG TRÌNH) ================= -->
+  <div class="modal-bg" id="modalDiary" onclick="if(event.target===this)window.app.closeDiaryModal()">
+    <div class="modal wide" role="dialog" style="max-width:800px">
+      <h2 id="dTitle">Nhật ký công trình</h2>
+      <div class="form-grid-3col">
+        <div class="field">
+          <label for="d_date">Ngày thi công *</label>
+          <input type="date" id="d_date">
+        </div>
+        <div class="field">
+          <label for="d_wam">Thời tiết buổi sáng</label>
+          <select id="d_wam"></select>
+        </div>
+        <div class="field">
+          <label for="d_wpm">Thời tiết buổi chiều</label>
+          <select id="d_wpm"></select>
+        </div>
+      </div>
+      <div class="form-grid-2col">
+        <div class="field">
+          <label for="d_folder">Hạng mục dự án</label>
+          <select id="d_folder"></select>
+        </div>
+        <div class="field">
+          <label for="d_area">Vị trí thi công chi tiết</label>
+          <input id="d_area" placeholder="VD: Tầng 3, phòng máy chủ, trục cáp A…">
+        </div>
+      </div>
+
+      <h3>👷 Nhân lực trên công trường</h3>
+      <div class="form-grid-3col">
+        <div class="field"><label>Cán bộ kỹ thuật (người)</label><input type="number" min="0" id="d_tech"></div>
+        <div class="field"><label>Nhân công cơ hữu (người)</label><input type="number" min="0" id="d_perm"></div>
+        <div class="field"><label>Nhân công khoán (người)</label><input type="number" min="0" id="d_contract"></div>
+        <div class="field"><label>Tăng ca (số người)</label><input type="number" min="0" id="d_otp"></div>
+        <div class="field"><label>Tăng ca (giờ/người)</label><input type="number" step="0.5" min="0" id="d_oth"></div>
+        <div class="field"><label>Nội dung tăng ca</label><input id="d_otn" placeholder="VD: Hàn nối cáp quang"></div>
+      </div>
+
+      <h3>🚜 Máy thi công (số ca máy)</h3>
+      <div id="d_machines"></div>
+
+      <h3>📦 Vật tư nhập về / sử dụng</h3>
+      <div id="d_materials"></div>
+
+      <h3>📝 Nội dung công việc thực hiện</h3>
+      <div class="field">
+        <textarea id="d_work" rows="3" placeholder="Mô tả các công việc đã thực hiện trong ngày…"></textarea>
+      </div>
+
+      <h3>✅ Đầu việc liên quan</h3>
+      <div id="d_tasks" style="margin-bottom:6px"></div>
+      <select id="d_task_add" onchange="if(this.value){window.app.addDiaryTask(this.value);this.value='';}"></select>
+
+      <h3>📊 Khối lượng hoàn thành trong ngày</h3>
+      <div id="d_quantities"></div>
+
+      <h3>⚠️ An toàn lao động, sự cố & Đề xuất</h3>
+      <div class="form-grid-2col">
+        <div class="field"><label>An toàn & Vệ sinh môi trường</label><input id="d_safety"></div>
+        <div class="field"><label>Sự cố & Vướng mắc</label><input id="d_issues"></div>
+        <div class="field"><label>Kiến nghị & Đề xuất</label><input id="d_proposals"></div>
+        <div class="field"><label>Ý kiến Giám sát / Chủ đầu tư</label><input id="d_super"></div>
+      </div>
+
+      <h3>📷 Ảnh hiện trường & Tài liệu đính kèm</h3>
+      <div id="d_files"></div>
 
       <div class="modal-actions" style="margin-top:16px">
+        <button class="btn danger" id="d_del" onclick="window.app.deleteDiary()">Xoá</button>
+        <button class="btn" id="d_confirm" style="color:var(--green);border-color:var(--green)" onclick="window.app.toggleConfirmDiary()">✔ Xác nhận nhật ký</button>
         <span style="flex:1"></span>
-        <button class="btn" onclick="window.app.closeProjectPermissionsModal()">Đóng</button>
-        <button class="btn primary" id="btnSaveProjectPerm" onclick="window.app.saveProjectPermissions()">Lưu phân quyền</button>
+        <button class="btn" onclick="window.app.closeDiaryModal()">Đóng</button>
+        <button class="btn primary" onclick="window.app.saveDiary()">Lưu nhật ký</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= MODAL: LEDGER (SỔ QUỸ THU CHI) ================= -->
+  <div class="modal-bg" id="modalLedger" onclick="if(event.target===this)window.app.closeLedgerModal()">
+    <div class="modal" role="dialog" style="max-width:540px">
+      <h2 id="lTitle">Phiếu thu chi</h2>
+      <div class="tabs" style="margin-bottom:12px">
+        <button class="tab" id="l_k_chi" onclick="window.app.setLedgerModalKind('chi')">🔻 Chi tiền</button>
+        <button class="tab" id="l_k_nhan" onclick="window.app.setLedgerModalKind('nhan')">🔺 Nhận tiền (Tạm ứng)</button>
+      </div>
+      <div class="form-grid-2col">
+        <div class="field">
+          <label for="l_date">Ngày thực hiện *</label>
+          <input type="date" id="l_date">
+        </div>
+        <div class="field">
+          <label for="l_person">Người thực hiện</label>
+          <select id="l_person"></select>
+        </div>
+        <div class="field">
+          <label for="l_cat">Danh mục *</label>
+          <select id="l_cat"></select>
+        </div>
+        <div class="field">
+          <label for="l_folder">Hạng mục dự án</label>
+          <select id="l_folder"></select>
+        </div>
+      </div>
+      <div class="field">
+        <label for="l_content">Nội dung phiếu *</label>
+        <input id="l_content" placeholder="VD: Mua dây cáp mạng Cat6, Ăn trưa đội thi công…">
+      </div>
+      <div class="form-grid-2col">
+        <div class="field">
+          <label for="l_unit">Đơn vị tính</label>
+          <input id="l_unit" placeholder="cuộn, cái, bộ, suất…">
+        </div>
+        <div class="field">
+          <label for="l_qty">Số lượng</label>
+          <input type="number" step="0.1" id="l_qty" oninput="window.app.calcLedgerAmount()">
+        </div>
+        <div class="field">
+          <label for="l_price">Đơn giá (đ)</label>
+          <input id="l_price" inputmode="numeric" oninput="window.app.calcLedgerAmount()">
+        </div>
+        <div class="field">
+          <label for="l_amount">Thành tiền (đ) *</label>
+          <input id="l_amount" inputmode="numeric" style="font-weight:700">
+        </div>
+      </div>
+      <div class="field">
+        <label for="l_note">Ghi chú thêm</label>
+        <textarea id="l_note" rows="2"></textarea>
+      </div>
+      <div class="field">
+        <label>Hóa đơn / Chứng từ đính kèm</label>
+        <div id="l_files"></div>
+      </div>
+      <div class="modal-actions" style="margin-top:16px">
+        <button class="btn danger" id="l_del" onclick="window.app.deleteLedger()">Xoá</button>
+        <span style="flex:1"></span>
+        <button class="btn" onclick="window.app.closeLedgerModal()">Đóng</button>
+        <button class="btn primary" onclick="window.app.saveLedger()">Lưu phiếu</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= MODAL: WORKER (NHÂN CÔNG) ================= -->
+  <div class="modal-bg" id="modalWorker" onclick="if(event.target===this)window.app.closeWorkerModal()">
+    <div class="modal" role="dialog" style="max-width:480px">
+      <h2 id="wTitle">Nhân công</h2>
+      <div class="form-grid-2col">
+        <div class="field">
+          <label for="w_name">Họ và tên *</label>
+          <input id="w_name" placeholder="Nguyễn Văn A">
+        </div>
+        <div class="field">
+          <label for="w_team">Tổ / Đội</label>
+          <input id="w_team" placeholder="Tổ điện, Tổ cáp…">
+        </div>
+        <div class="field">
+          <label for="w_job">Chức danh / Tay nghề</label>
+          <input id="w_job" placeholder="Thợ chính, Thợ phụ…">
+        </div>
+        <div class="field">
+          <label for="w_phone">Số điện thoại</label>
+          <input id="w_phone" inputmode="tel">
+        </div>
+        <div class="field">
+          <label for="w_pay">Hình thức tính lương</label>
+          <select id="w_pay">
+            <option value="day">Lương ngày (đơn giá / công)</option>
+            <option value="month">Lương tháng</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="w_rate">Đơn giá chuẩn (đ)</label>
+          <input id="w_rate" inputmode="numeric" placeholder="VD: 500.000">
+        </div>
+      </div>
+      <div class="field">
+        <label for="w_bank">Tài khoản ngân hàng</label>
+        <input id="w_bank" placeholder="Số TK – Ngân hàng – Chủ tài khoản">
+      </div>
+      <div class="field">
+        <label for="w_note">Ghi chú</label>
+        <input id="w_note">
+      </div>
+      <label class="settings-toggle-label" style="margin-bottom:12px">
+        <input type="checkbox" id="w_active" checked style="width:auto;margin:0"> Đang làm việc
+      </label>
+      <div class="modal-actions">
+        <button class="btn danger" id="w_del" onclick="window.app.deleteWorker()">Xoá</button>
+        <span style="flex:1"></span>
+        <button class="btn" onclick="window.app.closeWorkerModal()">Đóng</button>
+        <button class="btn primary" onclick="window.app.saveWorker()">Lưu nhân công</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= MODAL: ADVANCE (TẠM ỨNG) ================= -->
+  <div class="modal-bg" id="modalAdvance" onclick="if(event.target===this)window.app.closeAdvanceModal()">
+    <div class="modal" role="dialog" style="max-width:480px">
+      <h2 id="aTitle">Phiếu tạm ứng</h2>
+      <div class="form-grid-2col">
+        <div class="field" style="grid-column:1/-1">
+          <label for="a_ref">Đối tượng ứng tiền *</label>
+          <select id="a_ref"></select>
+        </div>
+        <div class="field">
+          <label for="a_date">Ngày ứng *</label>
+          <input type="date" id="a_date">
+        </div>
+        <div class="field">
+          <label for="a_amount">Số tiền tạm ứng (đ) *</label>
+          <input id="a_amount" inputmode="numeric" style="font-weight:700">
+        </div>
+        <div class="field" id="a_month_wrap">
+          <label for="a_month">Trừ vào lương tháng</label>
+          <select id="a_month"></select>
+        </div>
+        <div class="field">
+          <label for="a_method">Hình thức chi</label>
+          <select id="a_method">
+            <option value="Chuyển khoản">Chuyển khoản</option>
+            <option value="Tiền mặt">Tiền mặt</option>
+          </select>
+        </div>
+      </div>
+      <div class="field">
+        <label for="a_note">Ghi chú tạm ứng</label>
+        <input id="a_note">
+      </div>
+      <div class="field">
+        <label>Ảnh hóa đơn / Bill chuyển khoản</label>
+        <div id="a_files"></div>
+      </div>
+      <div class="modal-actions" style="margin-top:16px">
+        <button class="btn danger" id="a_del" onclick="window.app.deleteAdvance()">Xoá</button>
+        <span style="flex:1"></span>
+        <button class="btn" onclick="window.app.closeAdvanceModal()">Đóng</button>
+        <button class="btn primary" onclick="window.app.saveAdvance()">Lưu tạm ứng</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= MODAL: CONTRACT (GIAO KHOÁN TỔ ĐỘI) ================= -->
+  <div class="modal-bg" id="modalContract" onclick="if(event.target===this)window.app.closeContractModal()">
+    <div class="modal wide" role="dialog" style="max-width:840px">
+      <h2 id="cTitle">Hợp đồng giao khoán tổ đội</h2>
+      <div class="form-grid-3col">
+        <div class="field">
+          <label for="c_team">Tên tổ đội nhận khoán *</label>
+          <input id="c_team" placeholder="VD: Đội cáp anh Tuấn">
+        </div>
+        <div class="field">
+          <label for="c_leader">Tổ trưởng</label>
+          <input id="c_leader">
+        </div>
+        <div class="field">
+          <label for="c_phone">Số điện thoại</label>
+          <input id="c_phone" inputmode="tel">
+        </div>
+      </div>
+      <h3>Khối lượng, đơn giá & Nghiệm thu</h3>
+      <div id="c_items"></div>
+      <div class="field" style="margin-top:10px">
+        <label for="c_note">Điều kiện hợp đồng & Ghi chú</label>
+        <textarea id="c_note" rows="2"></textarea>
+      </div>
+      <div class="field">
+        <label>Hợp đồng, Biên bản nghiệm thu đính kèm</label>
+        <div id="c_files"></div>
+      </div>
+      <div class="modal-actions" style="margin-top:16px">
+        <button class="btn danger" id="c_del" onclick="window.app.deleteContract()">Xoá</button>
+        <span style="flex:1"></span>
+        <button class="btn" onclick="window.app.closeContractModal()">Đóng</button>
+        <button class="btn primary" onclick="window.app.saveContract()">Lưu hợp đồng</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= MODAL: DEVICE (THIẾT BỊ) ================= -->
+  <div class="modal-bg" id="modalDevice" onclick="if(event.target===this)window.app.closeDeviceModal()">
+    <div class="modal" role="dialog" style="max-width:600px">
+      <h2 id="dvTitle">Thiết bị</h2>
+      <div class="form-grid-3col">
+        <div class="field">
+          <label for="dv_cat">Loại thiết bị</label>
+          <input id="dv_cat" placeholder="VD: Camera PTZ">
+        </div>
+        <div class="field">
+          <label for="dv_brand">Hãng sản xuất</label>
+          <input id="dv_brand" placeholder="VD: Hikvision, Cisco…">
+        </div>
+        <div class="field">
+          <label for="dv_model">Model thiết bị</label>
+          <input id="dv_model">
+        </div>
+      </div>
+      <div class="form-grid-3col">
+        <div class="field">
+          <label for="dv_serial">Serial (S/N) *</label>
+          <input id="dv_serial" class="mono">
+        </div>
+        <div class="field">
+          <label for="dv_mac">Địa chỉ MAC</label>
+          <input id="dv_mac" class="mono" placeholder="AA:BB:CC:DD:EE:FF">
+        </div>
+        <div class="field">
+          <label for="dv_ip">Địa chỉ IP</label>
+          <input id="dv_ip" class="mono" placeholder="192.168.1.10">
+        </div>
+      </div>
+      <div class="form-grid-2col">
+        <div class="field">
+          <label for="dv_folder">Hạng mục dự án</label>
+          <select id="dv_folder"></select>
+        </div>
+        <div class="field">
+          <label for="dv_loc">Vị trí lắp đặt</label>
+          <input id="dv_loc" placeholder="VD: Cổng chính, cột C3, tủ T1">
+        </div>
+        <div class="field">
+          <label for="dv_status">Trạng thái thiết bị</label>
+          <select id="dv_status">
+            <option value="stock">Trong kho</option>
+            <option value="installed">Đã lắp đặt</option>
+            <option value="accepted">Đã nghiệm thu</option>
+            <option value="warranty">Bảo hành / sửa</option>
+            <option value="broken">Hỏng / thay thế</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="dv_installer">Người lắp đặt</label>
+          <input id="dv_installer">
+        </div>
+        <div class="field">
+          <label for="dv_install">Ngày lắp đặt</label>
+          <input type="date" id="dv_install">
+        </div>
+        <div class="field">
+          <label for="dv_accept">Ngày nghiệm thu</label>
+          <input type="date" id="dv_accept">
+        </div>
+        <div class="field">
+          <label for="dv_warr">Hạn bảo hành</label>
+          <input type="date" id="dv_warr">
+        </div>
+        <div class="field">
+          <label for="dv_note">Ghi chú</label>
+          <input id="dv_note">
+        </div>
+      </div>
+      <div class="field">
+        <label>Ảnh chụp tại vị trí lắp đặt</label>
+        <div id="dv_files"></div>
+      </div>
+      <div class="modal-actions" style="margin-top:16px">
+        <button class="btn danger" id="dv_del" onclick="window.app.deleteDevice()">Xoá</button>
+        <span style="flex:1"></span>
+        <button class="btn" onclick="window.app.closeDeviceModal()">Đóng</button>
+        <button class="btn" onclick="window.app.saveDevice(true)">Lưu & Nhập tiếp</button>
+        <button class="btn primary" onclick="window.app.saveDevice(false)">Lưu thiết bị</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= MODAL: CHECK (BIÊN BẢN NGHIỆM THU) ================= -->
+  <div class="modal-bg" id="modalCheck" onclick="if(event.target===this)window.app.closeCheckModal()">
+    <div class="modal wide" role="dialog" style="max-width:840px">
+      <h2 id="ckTitle">Biên bản nghiệm thu</h2>
+      <div class="form-grid-3col">
+        <div class="field" style="grid-column:span 2">
+          <label for="ck_name">Tên biên bản / Đối tượng nghiệm thu *</label>
+          <input id="ck_name" placeholder="VD: Nghiệm thu lắp đặt camera khu A">
+        </div>
+        <div class="field">
+          <label for="ck_date">Ngày nghiệm thu</label>
+          <input type="date" id="ck_date">
+        </div>
+        <div class="field">
+          <label for="ck_folder">Hạng mục</label>
+          <select id="ck_folder"></select>
+        </div>
+        <div class="field" style="grid-column:span 2">
+          <label for="ck_part">Thành phần tham gia</label>
+          <textarea id="ck_part" rows="2" placeholder="CĐT: Ông A, TVGS: Ông B, Nhà thầu: Ông C…"></textarea>
+        </div>
+      </div>
+      <div class="field">
+        <label>Nội dung kiểm tra</label>
+        <select id="ck_tpl" onchange="if(this.value){window.app.applyCheckTemplate(this.value);this.value='';}" style="margin-bottom:6px"></select>
+        <div id="ck_items"></div>
+      </div>
+      <div class="form-grid-2col">
+        <div class="field">
+          <label for="ck_concl">Kết luận</label>
+          <select id="ck_concl">
+            <option value="ok">Đạt yêu cầu</option>
+            <option value="cond">Đạt có điều kiện</option>
+            <option value="fail">Không đạt</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="ck_note">Ý kiến khác / Yêu cầu khắc phục</label>
+          <input id="ck_note">
+        </div>
+      </div>
+      <div class="field">
+        <label>Hồ sơ, Ảnh đính kèm</label>
+        <div id="ck_files"></div>
+      </div>
+      <div class="modal-actions" style="margin-top:16px">
+        <button class="btn danger" id="ck_del" onclick="window.app.deleteCheck()">Xoá</button>
+        <span style="flex:1"></span>
+        <button class="btn" onclick="window.app.closeCheckModal()">Đóng</button>
+        <button class="btn primary" onclick="window.app.saveCheck()">Lưu biên bản</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= MODAL: ISSUE (LỖI TỒN TẠI) ================= -->
+  <div class="modal-bg" id="modalIssue" onclick="if(event.target===this)window.app.closeIssueModal()">
+    <div class="modal" role="dialog" style="max-width:540px">
+      <h2 id="isTitle">Lỗi tồn tại</h2>
+      <div class="field">
+        <label for="is_title">Nội dung lỗi / Tồn tại *</label>
+        <input id="is_title" placeholder="VD: Camera số 4 bị nhiễu ban đêm…">
+      </div>
+      <div class="form-grid-2col">
+        <div class="field">
+          <label for="is_folder">Hạng mục</label>
+          <select id="is_folder"></select>
+        </div>
+        <div class="field">
+          <label for="is_loc">Vị trí</label>
+          <input id="is_loc" placeholder="VD: Cột C12, phòng họp">
+        </div>
+        <div class="field">
+          <label for="is_sev">Mức độ nghiêm trọng</label>
+          <select id="is_sev">
+            <option value="high">Nghiêm trọng</option>
+            <option value="med">Trung bình</option>
+            <option value="low">Nhẹ</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="is_assignee">Người phụ trách sửa</label>
+          <select id="is_assignee"></select>
+        </div>
+        <div class="field">
+          <label for="is_due">Hạn khắc phục</label>
+          <input type="date" id="is_due">
+        </div>
+        <div class="field">
+          <label for="is_status">Trạng thái xử lý</label>
+          <select id="is_status">
+            <option value="open">Chưa sửa</option>
+            <option value="fixing">Đang sửa</option>
+            <option value="fixed">Đã sửa xong</option>
+            <option value="closed">Đã đóng</option>
+          </select>
+        </div>
+      </div>
+      <div class="field">
+        <label for="is_note">Ghi chú & Phương án khắc phục</label>
+        <textarea id="is_note" rows="2"></textarea>
+      </div>
+      <div class="field">
+        <label>Ảnh hiện trạng (trước & sau sửa)</label>
+        <div id="is_files"></div>
+      </div>
+      <div class="modal-actions" style="margin-top:16px">
+        <button class="btn danger" id="is_del" onclick="window.app.deleteIssue()">Xoá</button>
+        <span style="flex:1"></span>
+        <button class="btn" onclick="window.app.closeIssueModal()">Đóng</button>
+        <button class="btn primary" onclick="window.app.saveIssue()">Lưu lỗi</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= MODAL: RECEIPT (ĐỢT THANH TOÁN CĐT) ================= -->
+  <div class="modal-bg" id="modalReceipt" onclick="if(event.target===this)window.app.closeReceiptModal()">
+    <div class="modal" role="dialog" style="max-width:500px">
+      <h2 id="rcTitle">Đợt thanh toán từ CĐT</h2>
+      <div class="field">
+        <label for="rc_name">Tên đợt thanh toán *</label>
+        <input id="rc_name" placeholder="VD: Tạm ứng 30%, Thanh toán đợt 1…">
+      </div>
+      <div class="form-grid-2col">
+        <div class="field">
+          <label for="rc_amount">Số tiền dự kiến (đ) *</label>
+          <input id="rc_amount" inputmode="numeric">
+        </div>
+        <div class="field">
+          <label for="rc_planned">Hạn dự kiến thu</label>
+          <input type="date" id="rc_planned">
+        </div>
+        <div class="field">
+          <label for="rc_status">Trạng thái</label>
+          <select id="rc_status" onchange="document.getElementById('rc_received_wrap').style.display = this.value === 'received' ? '' : 'none';">
+            <option value="planned">Chưa thu</option>
+            <option value="received">Đã thu</option>
+          </select>
+        </div>
+      </div>
+      <div id="rc_received_wrap" class="form-grid-2col" style="display:none">
+        <div class="field">
+          <label for="rc_date">Ngày thực thu</label>
+          <input type="date" id="rc_date">
+        </div>
+        <div class="field">
+          <label for="rc_got">Số tiền thực thu (đ)</label>
+          <input id="rc_got" inputmode="numeric">
+        </div>
+      </div>
+      <div class="field">
+        <label for="rc_note">Ghi chú</label>
+        <input id="rc_note">
+      </div>
+      <div class="field">
+        <label>Hồ sơ thanh toán, chứng từ</label>
+        <div id="rc_files"></div>
+      </div>
+      <div class="modal-actions" style="margin-top:16px">
+        <button class="btn danger" id="rc_del" onclick="window.app.deleteReceipt()">Xoá</button>
+        <span style="flex:1"></span>
+        <button class="btn" onclick="window.app.closeReceiptModal()">Đóng</button>
+        <button class="btn primary" onclick="window.app.saveReceipt()">Lưu đợt thanh toán</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= MODAL: GUARANTEE (BẢO LÃNH NGÂN HÀNG) ================= -->
+  <div class="modal-bg" id="modalGuarantee" onclick="if(event.target===this)window.app.closeGuaranteeModal()">
+    <div class="modal" role="dialog" style="max-width:520px">
+      <h2 id="gTitle">Thư bảo lãnh ngân hàng</h2>
+      <div class="form-grid-2col">
+        <div class="field">
+          <label for="g_type">Loại bảo lãnh</label>
+          <select id="g_type">
+            <option value="performance">Bảo lãnh thực hiện HĐ</option>
+            <option value="advance">Bảo lãnh tạm ứng</option>
+            <option value="warranty">Bảo lãnh bảo hành</option>
+            <option value="bid">Bảo lãnh dự thầu</option>
+            <option value="other">Bảo lãnh khác</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="g_bank">Ngân hàng phát hành</label>
+          <input id="g_bank" placeholder="VD: Vietcombank, BIDV…">
+        </div>
+        <div class="field">
+          <label for="g_number">Số thư bảo lãnh *</label>
+          <input id="g_number" class="mono">
+        </div>
+        <div class="field">
+          <label for="g_amount">Giá trị bảo lãnh (đ)</label>
+          <input id="g_amount" inputmode="numeric">
+        </div>
+        <div class="field">
+          <label for="g_issue">Ngày phát hành</label>
+          <input type="date" id="g_issue">
+        </div>
+        <div class="field">
+          <label for="g_expiry">Ngày hết hạn *</label>
+          <input type="date" id="g_expiry">
+        </div>
+        <div class="field">
+          <label for="g_status">Trạng thái bảo lãnh</label>
+          <select id="g_status">
+            <option value="active">Đang hiệu lực</option>
+            <option value="extended">Đã gia hạn</option>
+            <option value="released">Đã giải toả</option>
+          </select>
+        </div>
+      </div>
+      <div class="field">
+        <label for="g_note">Ghi chú</label>
+        <input id="g_note">
+      </div>
+      <div class="field">
+        <label>Bản scan thư bảo lãnh</label>
+        <div id="g_files"></div>
+      </div>
+      <div class="modal-actions" style="margin-top:16px">
+        <button class="btn danger" id="g_del" onclick="window.app.deleteGuarantee()">Xoá</button>
+        <span style="flex:1"></span>
+        <button class="btn" onclick="window.app.closeGuaranteeModal()">Đóng</button>
+        <button class="btn primary" onclick="window.app.saveGuarantee()">Lưu bảo lãnh</button>
       </div>
     </div>
   </div>

@@ -3,7 +3,12 @@ import { api } from './api.js';
 
 export class StateManager {
   constructor() {
-    this.data = { projects: [], tasks: [], users: [], fields: [] };
+    this.data = {
+      projects: [], tasks: [], users: [], fields: [],
+      diary: [], ledger: [], categories: [], workers: [],
+      labor: [], advances: [], contracts: [], devices: [],
+      checks: [], issues: [], receipts: [], guarantees: [], groups: []
+    };
     this.queue = [];
     this.syncing = false;
     this.syncErr = '';
@@ -13,6 +18,7 @@ export class StateManager {
 
     this.curProject = 'all';
     this.curFilter = 'all';
+    this.curPtab = 'tasks'; // 'tasks' | 'diary' | 'ledger' | 'labor' | 'contract' | 'device' | 'qa' | 'finance'
     this.searchQuery = '';
     this.assigneeFilter = '';
     this.sortMode = 'manual';
@@ -44,13 +50,19 @@ export class StateManager {
   }
 
   normalize() {
-    ['projects', 'tasks', 'users', 'fields'].forEach(k => {
+    [
+      'projects', 'tasks', 'users', 'fields',
+      'diary', 'ledger', 'categories', 'workers',
+      'labor', 'advances', 'contracts', 'devices',
+      'checks', 'issues', 'receipts', 'guarantees', 'groups'
+    ].forEach(k => {
       if (!Array.isArray(this.data[k])) this.data[k] = [];
     });
     this.data.projects.forEach(p => {
       if (!p.info || typeof p.info !== 'object') p.info = {};
       if (!Array.isArray(p.folders)) p.folders = [];
       if (!Array.isArray(p.files)) p.files = [];
+      if (!p.budget || typeof p.budget !== 'object') p.budget = {};
     });
     this.data.tasks.forEach(t => {
       if (!Array.isArray(t.files)) t.files = [];
@@ -126,6 +138,94 @@ export class StateManager {
     if (!s) return '';
     const [y, m, d] = String(s).split('-');
     return d + '/' + m + (y != new Date().getFullYear() ? '/' + String(y).slice(2) : '');
+  }
+
+  money(n) {
+    const x = Math.round(Number(n) || 0);
+    return isNaN(x) ? '0 đ' : x.toLocaleString('vi-VN');
+  }
+
+  dowOf(s) {
+    if (!s) return '';
+    const d = new Date(s + 'T00:00:00');
+    const dows = ['Chủ nhật', 'Thứ hai', 'Thứ ba', 'Thứ tư', 'Thứ năm', 'Thứ sáu', 'Thứ bảy'];
+    return dows[d.getDay()] || '';
+  }
+
+  curMonth() {
+    const d = new Date();
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+  }
+
+  monthLabel(m) {
+    if (!m) return '';
+    const [y, mm] = String(m).split('-');
+    return `Tháng ${mm}/${y}`;
+  }
+
+  monthDays(m) {
+    if (!m) return 30;
+    const [y, mm] = String(m).split('-').map(Number);
+    return new Date(y, mm, 0).getDate();
+  }
+
+  catById(id) {
+    return (this.data.categories || []).find(c => c.id === id);
+  }
+
+  sortedCats(kind) {
+    const list = this.data.categories || [];
+    const filtered = kind ? list.filter(c => c.kind === kind) : list;
+    return [...filtered].sort((a, b) => (Number(a.sort) || 0) - (Number(b.sort) || 0) || String(a.name || '').localeCompare(String(b.name || ''), 'vi'));
+  }
+
+  groupById(id) {
+    return (this.data.groups || []).find(g => g.id === id);
+  }
+
+  workerById(id) {
+    return (this.data.workers || []).find(w => w.id === id);
+  }
+
+  workerName(id) {
+    const w = this.workerById(id);
+    return w ? (w.name || id) : id;
+  }
+
+  lsum(list, kind, status) {
+    return (list || [])
+      .filter(l => (!kind || l.kind === kind) && (!status || l.status === status))
+      .reduce((sum, l) => sum + (Number(l.amount) || 0), 0);
+  }
+
+  diaryTotals(list) {
+    return (list || []).reduce((a, d) => {
+      const L = d.labor || {};
+      a.lab += (+L.tech || 0) + (+L.perm || 0) + (+L.contract || 0);
+      a.ot += (+L.otPeople || 0) * (+L.otHours || 0);
+      a.ms += (d.machines || []).reduce((s, m) => s + (+m.shifts || 0), 0);
+      return a;
+    }, { lab: 0, ot: 0, ms: 0 });
+  }
+
+  projCosts(p) {
+    const pid = typeof p === 'string' ? p : p?.id;
+    const ledgers = (this.data.ledger || []).filter(l => l.projectId === pid && l.status === 'approved' && l.kind === 'chi');
+    const byCat = {};
+    ledgers.forEach(l => {
+      const catId = l.categoryId || '__none';
+      byCat[catId] = (byCat[catId] || 0) + (Number(l.amount) || 0);
+    });
+    const totalLedger = ledgers.reduce((sum, l) => sum + (Number(l.amount) || 0), 0);
+    return { total: totalLedger, byCat };
+  }
+
+  projRevenue(p) {
+    const pid = typeof p === 'string' ? p : p?.id;
+    const rcpts = (this.data.receipts || []).filter(r => r.projectId === pid);
+    const planned = rcpts.reduce((sum, r) => sum + (Number(r.amount) || 0), 0);
+    const got = rcpts.filter(r => r.status === 'received').reduce((sum, r) => sum + (Number(r.receivedAmount) || Number(r.amount) || 0), 0);
+    return { planned, got, rec: rcpts };
   }
 
   prog(t) {
@@ -312,7 +412,14 @@ export class StateManager {
 
   // Optimistic UI & Sync Queue
   upsertLocal(type, rec) {
-    const typeKey = type + 's';
+    const TYPE_KEY = {
+      project: 'projects', task: 'tasks', user: 'users', field: 'fields',
+      diary: 'diary', ledger: 'ledger', category: 'categories', pgroup: 'groups', group: 'groups',
+      worker: 'workers', labor: 'labor', advance: 'advances', contract: 'contracts',
+      device: 'devices', receipt: 'receipts', guarantee: 'guarantees',
+      check: 'checks', issue: 'issues'
+    };
+    const typeKey = TYPE_KEY[type] || (type.endsWith('s') ? type : type + 's');
     const arr = this.data[typeKey];
     if (!arr) return;
     const i = arr.findIndex(x => x.id === rec.id);

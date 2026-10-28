@@ -1335,3 +1335,291 @@ main {
   }
 }
 
+/* ===================================================================
+   V8 CONSTRUCTION ERP MODULES STYLING
+   =================================================================== */
+
+/* Project Sub-Tabs Bar */
+.ptabs {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding: 4px 2px 10px 2px;
+  margin-bottom: 12px;
+  border-bottom: 1px solid var(--border-light);
+  -webkit-overflow-scrolling: touch;
+}
+
+.ptabs .tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  font-size: var(--font-sm);
+  font-weight: 500;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-light);
+  background: var(--bg-surface);
+  color: var(--text-secondary);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+}
+
+.ptabs .tab:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+  border-color: var(--border-medium);
+}
+
+.ptabs .tab.active {
+  background: var(--pri-50);
+  color: var(--pri-600);
+  border-color: var(--pri-500);
+  font-weight: 600;
+  box-shadow: 0 0 0 1px var(--pri-500);
+}
+
+[data-theme="dark"] .ptabs .tab.active {
+  background: rgba(37, 99, 235, 0.15);
+  color: var(--pri-400);
+  border-color: var(--pri-500);
+}
+
+.ptabs .tab b {
+  font-size: 11px;
+  padding: 1px 6px;
+  border-radius: var(--radius-full);
+  background: var(--bg-hover);
+  color: var(--text-muted);
+}
+
+.ptabs .tab.active b {
+  background: var(--pri-500);
+  color: #fff;
+}
+
+/* Horizontal percentage bar */
+.hbar {
+  display: grid;
+  grid-template-columns: minmax(140px, 220px) 1fr 180px;
+  gap: 12px;
+  align-items: center;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--border-light);
+}
+
+.hbar .hb {
+  height: 8px;
+  background: var(--border-light);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.hbar .hb i {
+  display: block;
+  height: 100%;
+  background: var(--pri-500);
+  border-radius: 4px;
+  transition: width 0.3s ease;
+}
+
+.hbar .hv {
+  text-align: right;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  font-size: var(--font-sm);
+}
+
+/* Site Diary Cards */
+.dcard {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg);
+  padding: 14px 16px;
+  margin-bottom: 10px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: var(--shadow-sm);
+}
+
+.dcard:hover {
+  background: var(--bg-hover);
+  border-color: var(--border-medium);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-1px);
+}
+
+.dtext {
+  margin-top: 6px;
+  white-space: pre-wrap;
+  color: var(--text-secondary);
+  font-size: var(--font-sm);
+}
+
+/* Timesheet Matrix Table (.att) */
+.att {
+  border-collapse: collapse;
+  font-size: 12px;
+  width: auto;
+}
+
+.att th, .att td {
+  border: 1px solid var(--border-light);
+  text-align: center;
+  min-width: 28px;
+  height: 30px;
+  padding: 0 3px;
+  white-space: nowrap;
+}
+
+.att th {
+  background: var(--bg-main);
+  font-weight: 600;
+  font-size: 11px;
+  color: var(--text-muted);
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+
+.att th.click {
+  cursor: pointer;
+}
+
+.att th.click:hover {
+  background: var(--pri-50);
+  color: var(--pri-600);
+}
+
+.att .dw {
+  font-weight: 400;
+  font-size: 10px;
+}
+
+.att td.c {
+  cursor: pointer;
+  user-select: none;
+  font-weight: 600;
+  transition: background 0.15s ease;
+}
+
+.att td.c:hover {
+  outline: 2px solid var(--pri-500);
+  outline-offset: -2px;
+}
+
+.att .full {
+  background: #dcfce7 !important;
+  color: #14532d !important;
+  font-weight: 700;
+}
+
+.att .half {
+  background: #fef9c3 !important;
+  color: #713f12 !important;
+  font-weight: 700;
+}
+
+.att .off {
+  background: #fee2e2 !important;
+  color: #7f1d1d !important;
+}
+
+.att .wk {
+  background: rgba(148, 163, 184, 0.15);
+}
+
+.att sup {
+  color: #c2410c;
+  font-weight: 700;
+  font-size: 9px;
+  margin-left: 1px;
+}
+
+.att .nm {
+  position: sticky;
+  left: 0;
+  background: var(--bg-surface);
+  text-align: left;
+  padding: 0 10px;
+  min-width: 160px;
+  z-index: 3;
+}
+
+.att thead .nm {
+  z-index: 4;
+}
+
+.att .sum {
+  background: var(--bg-main);
+  font-weight: 600;
+  min-width: 44px;
+  padding: 0 6px;
+}
+
+/* Numeric input styling in finance/budget */
+.ninp {
+  padding: 5px 8px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-light);
+  background: var(--bg-surface);
+  color: var(--text-primary);
+}
+
+/* QR Code Label Printing Grid */
+#printArea {
+  display: none;
+}
+
+.qrgrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 5mm;
+}
+
+.qrlabel {
+  display: flex;
+  gap: 3mm;
+  align-items: center;
+  border: 1px dashed #999;
+  padding: 3mm;
+  font: 9pt Arial, sans-serif;
+  color: #000;
+  background: #fff;
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+.qrlabel img {
+  width: 22mm;
+  height: 22mm;
+  image-rendering: pixelated;
+  flex-shrink: 0;
+}
+
+.qrlabel span {
+  font-size: 7.5pt;
+  color: #444;
+}
+
+@media print {
+  body > *:not(#printArea) {
+    display: none !important;
+  }
+  #printArea {
+    display: block !important;
+  }
+  body {
+    background: #fff;
+  }
+  @page {
+    size: A4;
+    margin: 8mm;
+  }
+}
+
+

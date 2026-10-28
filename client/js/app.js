@@ -5,6 +5,12 @@ import { renderProjectsSidebar, renderProjectHeader } from './components/project
 import { renderTasksMain } from './components/tasks.js';
 import { renderStatsView, exportStatsCsv } from './components/stats.js';
 import { modals, closeModalEl } from './components/modal.js';
+import {
+  renderProjectTabs,
+  moduleState,
+  printDeviceQR
+} from './components/modules.js';
+import * as v8Modals from './components/v8modals.js';
 
 class App {
   constructor() {
@@ -67,10 +73,11 @@ class App {
     // Keyboard Shortcuts (Esc to close modals)
     document.addEventListener('keydown', e => {
       if (e.key === 'Escape') {
-        closeModalEl('modalTask');
-        closeModalEl('modalProject');
-        closeModalEl('modalSettings');
-        closeModalEl('modalProjectPermissions');
+        [
+          'modalTask', 'modalProject', 'modalSettings', 'modalProjectPermissions',
+          'modalDiary', 'modalLedger', 'modalWorker', 'modalAdvance', 'modalContract',
+          'modalDevice', 'modalCheck', 'modalIssue', 'modalReceipt', 'modalGuarantee'
+        ].forEach(id => closeModalEl(id));
       }
     });
 
@@ -100,7 +107,10 @@ class App {
 
     if (state.view === 'tasks') {
       renderProjectHeader();
-      renderTasksMain();
+      renderProjectTabs();
+      if (!state.curPtab || state.curPtab === 'tasks') {
+        renderTasksMain();
+      }
     } else {
       renderStatsView();
     }
@@ -131,11 +141,38 @@ class App {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
-  selProject(id) {
+  selProject(id, ptab = null) {
+    if (id !== state.curProject || ptab) {
+      state.curPtab = ptab || 'tasks';
+    }
     state.curProject = id;
     state.view = 'tasks';
     this.render();
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  setPtab(ptabKey) {
+    state.curPtab = ptabKey;
+    this.render();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  onFabClick() {
+    const ptab = state.curPtab || 'tasks';
+    if (ptab === 'diary') this.openDiaryModal();
+    else if (ptab === 'ledger') this.openLedgerModal(null, 'chi');
+    else if (ptab === 'labor') {
+      if (moduleState.lsub === 'pay') this.openAdvanceModal(null, 'salary');
+      else this.openWorkerModal();
+    }
+    else if (ptab === 'contract') this.openContractModal();
+    else if (ptab === 'device') this.openDeviceModal();
+    else if (ptab === 'qa') {
+      if (moduleState.qsub === 'iss') this.openIssueModal();
+      else this.openCheckModal();
+    }
+    else if (ptab === 'finance') this.openReceiptModal();
+    else this.openTaskModal();
   }
 
   setFilter(filterKey) {
@@ -265,7 +302,348 @@ class App {
   addField() { modals.addField(); }
   deleteField(id) { modals.deleteField(id); }
 
+  addNewGroup() { modals.addNewGroup(); }
+  deleteGroup(id) { modals.deleteGroup(id); }
+  addNewCategory() { modals.addNewCategory(); }
+  deleteCategory(id) { modals.deleteCategory(id); }
+
   exportStatsCsv() { exportStatsCsv(); }
+
+  // ==========================================
+  // V8 CONSTRUCTION ERP MODULE DELEGATIONS
+  // ==========================================
+  // 1. Site Diary
+  setDiaryFilter(kind, val) {
+    if (kind === 'from') moduleState.diaryFrom = val;
+    else if (kind === 'to') moduleState.diaryTo = val;
+    renderProjectTabs();
+  }
+  openDiaryModal(id) { v8Modals.openDiaryModal(id); }
+  closeDiaryModal() { closeModalEl('modalDiary'); }
+  saveDiary() { v8Modals.saveDiary(); }
+  deleteDiary() { v8Modals.deleteDiary(); }
+  toggleConfirmDiary() { v8Modals.toggleConfirmDiary(); }
+  setDiaryDraftRow(kind, i, k, v) {
+    if (!v8Modals.v8Edit.diaryDraft[kind][i]) v8Modals.v8Edit.diaryDraft[kind][i] = {};
+    v8Modals.v8Edit.diaryDraft[kind][i][k] = v;
+  }
+  addDiaryDraftRow(kind) {
+    v8Modals.v8Edit.diaryDraft[kind].push({});
+    v8Modals.renderDiarySubRows(kind);
+  }
+  removeDiaryDraftRow(kind, i) {
+    v8Modals.v8Edit.diaryDraft[kind].splice(i, 1);
+    v8Modals.renderDiarySubRows(kind);
+  }
+  addDiaryTask(id) {
+    const t = state.taskById(id);
+    if (t) {
+      v8Modals.v8Edit.diaryDraft.tasks.push({ id: t.id, title: t.title, progress: t.progress || 0 });
+      v8Modals.renderDiaryTasks();
+    }
+  }
+  removeDiaryTask(i) {
+    v8Modals.v8Edit.diaryDraft.tasks.splice(i, 1);
+    v8Modals.renderDiaryTasks();
+  }
+
+  // 2. Ledger
+  setLedgerTab(t) {
+    moduleState.ltab = t;
+    renderProjectTabs();
+  }
+  setLedgerFilter(k, v) {
+    if (k === 'kind') moduleState.ledgerKind = v;
+    else if (k === 'person') moduleState.ledgerPerson = v.toLowerCase();
+    else if (k === 'cat') moduleState.ledgerCat = v;
+    else if (k === 'status') moduleState.ledgerStatus = v;
+    else if (k === 'month') moduleState.ledgerMonth = v;
+    renderProjectTabs();
+  }
+  openLedgerModal(id, kind) { v8Modals.openLedgerModal(id, kind); }
+  closeLedgerModal() { closeModalEl('modalLedger'); }
+  setLedgerModalKind(k) { v8Modals.setLedgerModalKind(k); }
+  calcLedgerAmount() { v8Modals.calcLedgerAmount(); }
+  saveLedger() { v8Modals.saveLedger(); }
+  deleteLedger() { v8Modals.deleteLedger(); }
+  setLedgerStatus(id, st) {
+    const l = state.data.ledger.find(x => x.id === id);
+    if (!l) return;
+    const user = api.currentUser ? (api.currentUser.username || api.currentUser.email) : 'admin';
+    state.commit('ledger', {
+      ...l,
+      status: st,
+      approvedBy: st === 'approved' ? user : '',
+      approvedAt: st === 'approved' ? Date.now() : null
+    });
+  }
+  exportLedgerCsv() {
+    const p = state.projById(state.curProject);
+    const list = state.data.ledger.filter(l => l.projectId === state.curProject);
+    const rows = [
+      ['Ngày', 'Người thực hiện', 'Loại', 'Danh mục', 'Hạng mục', 'Nội dung', 'ĐVT', 'Số lượng', 'Đơn giá', 'Thành tiền', 'Trạng thái']
+    ];
+    list.forEach(l => {
+      const c = state.catById(l.categoryId);
+      const f = p ? (p.folders || []).find(x => x.id === l.folderId) : null;
+      rows.push([
+        state.fmtDate(l.date),
+        state.shortName(l.person),
+        l.kind === 'nhan' ? 'Nhận' : 'Chi',
+        c ? c.name : '',
+        f ? f.name : '',
+        l.content,
+        l.unit || '',
+        l.qty || '',
+        l.price || '',
+        (l.kind === 'nhan' ? 1 : -1) * (Number(l.amount) || 0),
+        l.status || ''
+      ]);
+    });
+    this.downloadCsv(rows, `thu-chi-${p ? p.name : 'du-an'}-${state.todayStr()}.csv`);
+  }
+
+  // 3. Labor & Attendance
+  setLaborSubTab(sub) {
+    moduleState.lsub = sub;
+    renderProjectTabs();
+  }
+  setLaborMonth(m) {
+    moduleState.lmonth = m;
+    renderProjectTabs();
+  }
+  toggleAttMode() {
+    moduleState.attMode = moduleState.attMode === 'day' ? 'ot' : 'day';
+    renderProjectTabs();
+  }
+  cycleAttCell(laborId, dayNum) {
+    const l = state.data.labor.find(x => x.id === laborId);
+    if (!l) return;
+    const isOtMode = moduleState.attMode === 'ot';
+
+    if (isOtMode) {
+      const otObj = Object.assign({}, l.ot || {});
+      const cur = otObj[dayNum];
+      let next = 0.5;
+      if (cur === 0.5) next = 1;
+      else if (cur === 1) next = 1.5;
+      else if (cur === 1.5) next = 2;
+      else if (cur === 2) next = null;
+
+      if (next === null) delete otObj[dayNum];
+      else otObj[dayNum] = next;
+
+      state.commit('labor', { ...l, ot: otObj });
+    } else {
+      const daysObj = Object.assign({}, l.days || {});
+      const cur = daysObj[dayNum];
+      let next = 1;
+      if (cur === 1) next = 0.5;
+      else if (cur === 0.5) next = 0;
+      else if (cur === 0) next = null;
+
+      if (next === null) delete daysObj[dayNum];
+      else daysObj[dayNum] = next;
+
+      state.commit('labor', { ...l, days: daysObj });
+    }
+  }
+  bulkFillDay(dayNum) {
+    const curM = moduleState.lmonth || state.curMonth();
+    const rows = state.data.labor.filter(l => l.projectId === state.curProject && l.month === curM);
+    if (!rows.length) return;
+
+    const allHaveDay = rows.every(l => (l.days || {})[dayNum] === 1);
+    const updated = rows.map(l => {
+      const daysObj = Object.assign({}, l.days || {});
+      if (allHaveDay) delete daysObj[dayNum];
+      else daysObj[dayNum] = 1;
+      return { ...l, days: daysObj };
+    });
+
+    state.commitMany('labor', updated);
+  }
+  promptAddWorkerToLabor() {
+    const curM = moduleState.lmonth || state.curMonth();
+    const existingWorkerIds = new Set(
+      state.data.labor.filter(l => l.projectId === state.curProject && l.month === curM).map(l => l.workerId)
+    );
+    const candidates = state.data.workers.filter(w => String(w.active) !== 'false' && !existingWorkerIds.has(w.id));
+
+    if (!candidates.length) {
+      this.openWorkerModal();
+      return;
+    }
+
+    const workerNames = candidates.map((w, i) => `${i + 1}. ${w.name} (${w.team || 'Tự do'})`).join('\n');
+    const input = prompt(`Chọn số thứ tự nhân công để thêm vào bảng tháng ${state.monthLabel(curM)}:\n\n${workerNames}\n\n(Nhập số 1 đến ${candidates.length}, hoặc huỷ để tạo người mới):`);
+    if (!input) return;
+
+    const idx = parseInt(input, 10) - 1;
+    if (idx >= 0 && idx < candidates.length) {
+      const target = candidates[idx];
+      state.commit('labor', {
+        id: state.uid(),
+        projectId: state.curProject,
+        month: curM,
+        workerId: target.id,
+        days: {},
+        ot: {},
+        rate: target.rate || 0,
+        payType: target.payType || 'day',
+        stdDays: 26,
+        allowance: 0,
+        bonus: 0,
+        deduction: 0,
+        createdAt: Date.now(),
+        deleted: false
+      });
+    }
+  }
+  removeLaborRow(laborId) {
+    const l = state.data.labor.find(x => x.id === laborId);
+    if (!l || !confirm('Xoá dòng chấm công này của nhân công trong tháng?')) return;
+    state.commit('labor', { ...l, deleted: true });
+  }
+
+  // 4. Worker Master
+  openWorkerModal(id) { v8Modals.openWorkerModal(id); }
+  closeWorkerModal() { closeModalEl('modalWorker'); }
+  saveWorker() { v8Modals.saveWorker(); }
+  deleteWorker() { v8Modals.deleteWorker(); }
+
+  // 5. Advances
+  openAdvanceModal(id, kind, refId) { v8Modals.openAdvanceModal(id, kind, refId); }
+  closeAdvanceModal() { closeModalEl('modalAdvance'); }
+  saveAdvance() { v8Modals.saveAdvance(); }
+  deleteAdvance(id) { v8Modals.deleteAdvance(id); }
+
+  // 6. Contracts
+  openContractModal(id) { v8Modals.openContractModal(id); }
+  closeContractModal() { closeModalEl('modalContract'); }
+  saveContract() { v8Modals.saveContract(); }
+  deleteContract() { v8Modals.deleteContract(); }
+  addContractItem() {
+    v8Modals.v8Edit.contractDraftItems.push({ name: '', unit: '', qty: 0, price: 0, accQty: 0, note: '' });
+    v8Modals.renderContractItems();
+  }
+  updateContractItem(i, k, v) {
+    if (!v8Modals.v8Edit.contractDraftItems[i]) return;
+    if (k === 'price') v = parseFloat(String(v).replace(/[^\d]/g, '')) || 0;
+    v8Modals.v8Edit.contractDraftItems[i][k] = v;
+    v8Modals.renderContractItems();
+  }
+  removeContractItem(i) {
+    v8Modals.v8Edit.contractDraftItems.splice(i, 1);
+    v8Modals.renderContractItems();
+  }
+  exportContractCsv() {
+    const p = state.projById(state.curProject);
+    const list = state.data.contracts.filter(c => c.projectId === state.curProject);
+    const rows = [
+      ['Tổ đội', 'Tổ trưởng', 'SĐT', 'Hạng mục giao', 'ĐVT', 'KL giao', 'Đơn giá', 'Thành tiền giao', 'KL nghiệm thu', 'Giá trị NT', 'Ghi chú']
+    ];
+    list.forEach(c => {
+      (c.items || []).forEach(it => {
+        const v = (Number(it.qty) || 0) * (Number(it.price) || 0);
+        const a = (Number(it.accQty) || 0) * (Number(it.price) || 0);
+        rows.push([
+          c.team, c.leader || '', c.phone || '', it.name || '', it.unit || '', it.qty || '', it.price || '',
+          v, it.accQty || '', a, it.note || ''
+        ]);
+      });
+    });
+    this.downloadCsv(rows, `giao-khoan-${p ? p.name : 'du-an'}-${state.todayStr()}.csv`);
+  }
+
+  // 7. Devices & QR Print
+  setDeviceFilter(k, v) {
+    if (k === 'q') moduleState.devQ = v;
+    else if (k === 'status') moduleState.devStatus = v;
+    else if (k === 'cat') moduleState.devCat = v;
+    else if (k === 'folder') moduleState.devFolder = v;
+    else if (k === 'all') moduleState.devAll = v;
+    renderProjectTabs();
+  }
+  openDeviceModal(id) { v8Modals.openDeviceModal(id); }
+  closeDeviceModal() { closeModalEl('modalDevice'); }
+  saveDevice(more) { v8Modals.saveDevice(more); }
+  deleteDevice() { v8Modals.deleteDevice(); }
+  printQR(id) { printDeviceQR(id); }
+
+  // 8. QA Checks & Punch-list Issues
+  setQASubTab(sub) {
+    moduleState.qsub = sub;
+    renderProjectTabs();
+  }
+  setIssueStatusFilter(st) {
+    moduleState.issStatus = st;
+    renderProjectTabs();
+  }
+  openCheckModal(id) { v8Modals.openCheckModal(id); }
+  closeCheckModal() { closeModalEl('modalCheck'); }
+  saveCheck() { v8Modals.saveCheck(); }
+  deleteCheck() { v8Modals.deleteCheck(); }
+  applyCheckTemplate(tpl) { v8Modals.applyCheckTemplate(tpl); }
+  addCheckItem() {
+    v8Modals.v8Edit.checkDraftItems.push({ text: '', result: 'ok', note: '' });
+    v8Modals.renderCheckItems();
+  }
+  updateCheckItem(i, k, v) {
+    if (!v8Modals.v8Edit.checkDraftItems[i]) return;
+    v8Modals.v8Edit.checkDraftItems[i][k] = v;
+  }
+  removeCheckItem(i) {
+    v8Modals.v8Edit.checkDraftItems.splice(i, 1);
+    v8Modals.renderCheckItems();
+  }
+
+  openIssueModal(id) { v8Modals.openIssueModal(id); }
+  closeIssueModal() { closeModalEl('modalIssue'); }
+  saveIssue() { v8Modals.saveIssue(); }
+  deleteIssue() { v8Modals.deleteIssue(); }
+
+  // 9. Finance, Receipts & Guarantees
+  updateProjectFinance(k, v) {
+    const p = state.projById(state.curProject);
+    if (!p) return;
+    const val = k === 'retentionPct' ? parseFloat(v) : (parseFloat(String(v).replace(/[^\d]/g, '')) || 0);
+    state.commit('project', { ...p, [k]: val });
+  }
+  updateBudgetLine(key, v) {
+    const p = state.projById(state.curProject);
+    if (!p) return;
+    const budget = Object.assign({}, p.budget || {});
+    const val = parseFloat(String(v).replace(/[^\d]/g, '')) || 0;
+    if (val) budget[key] = val;
+    else delete budget[key];
+    state.commit('project', { ...p, budget });
+  }
+  openReceiptModal(id) { v8Modals.openReceiptModal(id); }
+  closeReceiptModal() { closeModalEl('modalReceipt'); }
+  saveReceipt() { v8Modals.saveReceipt(); }
+  deleteReceipt() { v8Modals.deleteReceipt(); }
+
+  openGuaranteeModal(id) { v8Modals.openGuaranteeModal(id); }
+  closeGuaranteeModal() { closeModalEl('modalGuarantee'); }
+  saveGuarantee() { v8Modals.saveGuarantee(); }
+  deleteGuarantee() { v8Modals.deleteGuarantee(); }
+
+  // Generic CSV Downloader
+  downloadCsv(rows, filename) {
+    const csv = rows.map(r => r.map(v => {
+      const s = String(v ?? '');
+      return /[",\n;]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+    }).join(',')).join('\r\n');
+    const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  }
 }
 
 window.app = new App();

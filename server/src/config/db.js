@@ -297,6 +297,8 @@ export function readFallbackData() {
       if (!parsed.roles) parsed.roles = DEFAULT_ROLES;
       if (!parsed.users || !parsed.users.length) parsed.users = getInitialFallbackData().users;
       if (!parsed.projectPermissions) parsed.projectPermissions = [];
+      const v8Keys = ['diary', 'ledger', 'categories', 'workers', 'labor', 'advances', 'contracts', 'devices', 'checks', 'issues', 'receipts', 'guarantees', 'groups'];
+      v8Keys.forEach(k => { if (!Array.isArray(parsed[k])) parsed[k] = []; });
       return parsed;
     }
   } catch (err) {

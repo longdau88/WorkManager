@@ -58,6 +58,11 @@ model Project {
   color              String              @default("#2563eb") @db.VarChar(50)
   note               String?             @db.Text
   dueDate            String?             @db.VarChar(50)
+  groupId            String?             @db.VarChar(191)
+  stage              String?             @db.VarChar(100)
+  contractValue      Float?
+  retentionPct       Float?              @default(5)
+  budget             Json?
   info               Json?
   folders            Json?
   files              Json?
@@ -69,6 +74,7 @@ model Project {
   projectPermissions ProjectPermission[]
 
   @@index([deleted])
+  @@index([groupId])
 }
 
 model Task {
@@ -126,4 +132,289 @@ model Field {
   updatedAt DateTime @updatedAt
 
   @@index([deleted])
+}
+
+model ProjectGroup {
+  id        String   @id @default(cuid()) @db.VarChar(191)
+  name      String   @db.VarChar(255)
+  sort      Int      @default(10)
+  deleted   Boolean  @default(false)
+  updatedBy String?  @db.VarChar(191)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([deleted])
+}
+
+model Category {
+  id        String   @id @default(cuid()) @db.VarChar(191)
+  name      String   @db.VarChar(255)
+  kind      String   @default("chi") @db.VarChar(50)
+  sort      Int      @default(10)
+  deleted   Boolean  @default(false)
+  updatedBy String?  @db.VarChar(191)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([deleted])
+}
+
+model Diary {
+  id             String   @id @default(cuid()) @db.VarChar(191)
+  projectId      String   @db.VarChar(191)
+  date           String   @db.VarChar(50)
+  weatherAM      String?  @db.VarChar(100)
+  weatherPM      String?  @db.VarChar(100)
+  folderId       String?  @db.VarChar(191)
+  area           String?  @db.VarChar(255)
+  workText       String?  @db.Text
+  tasks          Json?
+  quantities     Json?
+  labor          Json?
+  machines       Json?
+  materials      Json?
+  safety         String?  @db.Text
+  issues         String?  @db.Text
+  proposals      String?  @db.Text
+  supervisorNote String?  @db.Text
+  files          Json?
+  confirmedBy    String?  @db.VarChar(191)
+  confirmedAt    String?  @db.VarChar(50)
+  deleted        Boolean  @default(false)
+  createdBy      String?  @db.VarChar(191)
+  updatedBy      String?  @db.VarChar(191)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([projectId, deleted])
+  @@index([date])
+}
+
+model Ledger {
+  id           String   @id @default(cuid()) @db.VarChar(191)
+  projectId    String   @db.VarChar(191)
+  date         String   @db.VarChar(50)
+  kind         String   @default("chi") @db.VarChar(50)
+  categoryId   String?  @db.VarChar(191)
+  folderId     String?  @db.VarChar(191)
+  content      String   @db.Text
+  unit         String?  @db.VarChar(50)
+  qty          Float?
+  price        Float?
+  amount       Float    @default(0)
+  person       String?  @db.VarChar(191)
+  note         String?  @db.Text
+  files        Json?
+  status       String   @default("pending") @db.VarChar(50)
+  approvedBy   String?  @db.VarChar(191)
+  approvedAt   String?  @db.VarChar(50)
+  rejectReason String?  @db.Text
+  deleted      Boolean  @default(false)
+  createdBy    String?  @db.VarChar(191)
+  updatedBy    String?  @db.VarChar(191)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([projectId, deleted])
+  @@index([status, deleted])
+}
+
+model Worker {
+  id        String   @id @default(cuid()) @db.VarChar(191)
+  name      String   @db.VarChar(255)
+  team      String?  @db.VarChar(255)
+  job       String?  @db.VarChar(255)
+  phone     String?  @db.VarChar(100)
+  payType   String   @default("day") @db.VarChar(50)
+  rate      Float    @default(0)
+  bank      String?  @db.VarChar(255)
+  note      String?  @db.Text
+  active    Boolean  @default(true)
+  sort      Int      @default(10)
+  deleted   Boolean  @default(false)
+  createdBy String?  @db.VarChar(191)
+  updatedBy String?  @db.VarChar(191)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([deleted])
+}
+
+model Labor {
+  id        String   @id @default(cuid()) @db.VarChar(191)
+  projectId String   @db.VarChar(191)
+  month     String   @db.VarChar(20)
+  workerId  String   @db.VarChar(191)
+  days      Json?
+  ot        Json?
+  rate      Float?
+  payType   String?  @db.VarChar(50)
+  stdDays   Int?     @default(26)
+  allowance Float?   @default(0)
+  bonus     Float?   @default(0)
+  deduction Float?   @default(0)
+  payNote   String?  @db.Text
+  note      String?  @db.Text
+  deleted   Boolean  @default(false)
+  createdBy String?  @db.VarChar(191)
+  updatedBy String?  @db.VarChar(191)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([projectId, month, deleted])
+}
+
+model Advance {
+  id        String   @id @default(cuid()) @db.VarChar(191)
+  projectId String   @db.VarChar(191)
+  kind      String   @default("salary") @db.VarChar(50)
+  refId     String?  @db.VarChar(191)
+  month     String?  @db.VarChar(20)
+  date      String   @db.VarChar(50)
+  amount    Float    @default(0)
+  method    String?  @db.VarChar(100)
+  payer     String?  @db.VarChar(191)
+  note      String?  @db.Text
+  files     Json?
+  deleted   Boolean  @default(false)
+  createdBy String?  @db.VarChar(191)
+  updatedBy String?  @db.VarChar(191)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([projectId, deleted])
+}
+
+model Contract {
+  id        String   @id @default(cuid()) @db.VarChar(191)
+  projectId String   @db.VarChar(191)
+  team      String   @db.VarChar(255)
+  leader    String?  @db.VarChar(255)
+  phone     String?  @db.VarChar(100)
+  items     Json?
+  note      String?  @db.Text
+  files     Json?
+  sort      Int      @default(10)
+  deleted   Boolean  @default(false)
+  createdBy String?  @db.VarChar(191)
+  updatedBy String?  @db.VarChar(191)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([projectId, deleted])
+}
+
+model Device {
+  id          String   @id @default(cuid()) @db.VarChar(191)
+  projectId   String   @db.VarChar(191)
+  folderId    String?  @db.VarChar(191)
+  category    String?  @db.VarChar(255)
+  brand       String?  @db.VarChar(255)
+  model       String?  @db.VarChar(255)
+  serial      String?  @db.VarChar(255)
+  mac         String?  @db.VarChar(100)
+  ip          String?  @db.VarChar(100)
+  location    String?  @db.VarChar(255)
+  installDate String?  @db.VarChar(50)
+  installer   String?  @db.VarChar(255)
+  status      String   @default("stock") @db.VarChar(50)
+  acceptDate  String?  @db.VarChar(50)
+  warrantyEnd String?  @db.VarChar(50)
+  note        String?  @db.Text
+  files       Json?
+  sort        Int      @default(10)
+  deleted     Boolean  @default(false)
+  createdBy   String?  @db.VarChar(191)
+  updatedBy   String?  @db.VarChar(191)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([projectId, deleted])
+  @@index([serial])
+}
+
+model Check {
+  id           String   @id @default(cuid()) @db.VarChar(191)
+  projectId    String   @db.VarChar(191)
+  folderId     String?  @db.VarChar(191)
+  name         String   @db.VarChar(255)
+  date         String   @db.VarChar(50)
+  participants String?  @db.Text
+  items        Json?
+  conclusion   String?  @db.VarChar(100)
+  note         String?  @db.Text
+  files        Json?
+  deleted      Boolean  @default(false)
+  createdBy    String?  @db.VarChar(191)
+  updatedBy    String?  @db.VarChar(191)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([projectId, deleted])
+}
+
+model Issue {
+  id        String   @id @default(cuid()) @db.VarChar(191)
+  projectId String   @db.VarChar(191)
+  folderId  String?  @db.VarChar(191)
+  title     String   @db.VarChar(500)
+  location  String?  @db.VarChar(255)
+  severity  String   @default("med") @db.VarChar(50)
+  assignee  String?  @db.VarChar(191)
+  dueDate   String?  @db.VarChar(50)
+  status    String   @default("open") @db.VarChar(50)
+  note      String?  @db.Text
+  files     Json?
+  fixedAt   String?  @db.VarChar(50)
+  closedBy  String?  @db.VarChar(191)
+  deleted   Boolean  @default(false)
+  createdBy String?  @db.VarChar(191)
+  updatedBy String?  @db.VarChar(191)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([projectId, deleted])
+  @@index([status, deleted])
+}
+
+model Receipt {
+  id             String   @id @default(cuid()) @db.VarChar(191)
+  projectId      String   @db.VarChar(191)
+  name           String   @db.VarChar(255)
+  plannedDate    String?  @db.VarChar(50)
+  amount         Float    @default(0)
+  status         String   @default("planned") @db.VarChar(50)
+  receivedDate   String?  @db.VarChar(50)
+  receivedAmount Float?
+  note           String?  @db.Text
+  files          Json?
+  deleted        Boolean  @default(false)
+  createdBy      String?  @db.VarChar(191)
+  updatedBy      String?  @db.VarChar(191)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([projectId, deleted])
+}
+
+model Guarantee {
+  id         String   @id @default(cuid()) @db.VarChar(191)
+  projectId  String   @db.VarChar(191)
+  gtype      String   @default("other") @db.VarChar(50)
+  bank       String?  @db.VarChar(255)
+  number     String?  @db.VarChar(100)
+  amount     Float    @default(0)
+  issueDate  String?  @db.VarChar(50)
+  expiryDate String?  @db.VarChar(50)
+  status     String   @default("active") @db.VarChar(50)
+  note       String?  @db.Text
+  files      Json?
+  deleted    Boolean  @default(false)
+  createdBy  String?  @db.VarChar(191)
+  updatedBy  String?  @db.VarChar(191)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([projectId, deleted])
+  @@index([expiryDate])
 }
