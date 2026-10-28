@@ -202,6 +202,19 @@ export const syncService = {
             operationKey: `${result.id}:${record.updatedAt || result.updatedAt || Date.now()}`
           });
         }
+        if ((type === 'comment' || type === 'comments') && !record.deleted) {
+          const task = await taskRepository.findById(result.taskId);
+          if (task) {
+            const users = await userRepository.findAll();
+            await notificationService.notifyTaskComment({
+              comment: result,
+              task,
+              actorId: user?.id || null,
+              users,
+              operationKey: `${result.id}:${record.updatedAt || result.updatedAt || Date.now()}`
+            });
+          }
+        }
       }
     }
 

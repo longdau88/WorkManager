@@ -40,6 +40,26 @@ async function createImmediateNotification({ user, type, task, title, message, o
 }
 
 export const notificationService = {
+    async notifyTaskComment({ comment, task, actorId, users, operationKey }) {
+        const admins = users.filter(user => user.isActive !== false
+            && (user.role?.name === 'admin' || user.role?.permissions?.includes('edit_all_projects')));
+        const participants = taskUsers(task, users);
+        const targets = [...new Map([...participants, ...admins]
+            .filter(user => user.id !== actorId)
+            .map(user => [user.id, user])).values()];
+
+        for (const user of targets) {
+            await createImmediateNotification({
+                user,
+                type: 'task_comment',
+                task,
+                title: 'Có trao đổi mới trong công việc',
+                message: `${task.title || 'Công việc'} có trao đổi mới${comment.text ? `: ${String(comment.text).slice(0, 160)}` : '.'}`,
+                operationKey
+            });
+        }
+    },
+
     async notifyTaskChange({ task, before, actorId, users, project, operationKey }) {
         const admins = users.filter(user => user.isActive !== false
             && (user.role?.name === 'admin' || user.role?.permissions?.includes('edit_all_projects')));
