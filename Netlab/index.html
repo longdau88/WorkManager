@@ -25,6 +25,8 @@ header input.title{background:#1b3d60;border:1px solid #2c5880;color:#fff;border
 .tb-project #bSave:hover,.btn-save-pri:hover{background:#084478!important}
 .btn-exit{background:#c0392b!important;border:1px solid #e74c3c!important;color:#fff!important;font-weight:700!important;padding:4px 10px!important;border-radius:6px;cursor:pointer;display:inline-flex;align-items:center;gap:5px;box-shadow:0 1px 4px rgba(0,0,0,0.25);white-space:nowrap}
 .btn-exit:hover{background:#a93226!important}
+/* Ẩn nút thoát bên trong iframe nhúng, chỉ hiện khi mở standalone (Tab mới hoặc trực tiếp) */
+html.is-embedded #bExitToWM{display:none!important}
 .save-badge{font-size:11px;padding:3px 9px;border-radius:12px;display:inline-flex;align-items:center;gap:5px;font-weight:600;white-space:nowrap}
 .save-badge.saved{background:rgba(25,166,74,0.2);color:#46d376;border:1px solid rgba(25,166,74,0.4)}
 .save-badge.unsaved{background:rgba(217,138,0,0.25);color:#ffc043;border:1px solid rgba(217,138,0,0.5)}
@@ -476,6 +478,17 @@ const urlParams = new URLSearchParams(window.location.search);
 const NETLAB_PID = urlParams.get('projectId') || '';
 let NETLAB_TOKEN = urlParams.get('token') || localStorage.getItem('wm.token') || '';
 let KEY = NETLAB_PID ? ('netlab.project.' + NETLAB_PID) : 'netlab.project.v2';
+
+/* Ẩn nút "Quay lại dự án" bên trong iframe khi đang nhúng trong overlay WorkManager
+   (overlay đã có nút này rồi, tránh lặp); chỉ hiện khi mở standalone (Tab mới) */
+const IS_EMBEDDED = window.self !== window.top;
+if (IS_EMBEDDED) {
+ // Thêm class vào <html> ngay lập tức để CSS ẩn ngay trước khi render
+ document.documentElement.classList.add('is-embedded');
+ // Ẩn trực tiếp sau khi DOM sẵn sàng (fallback)
+ const _exitBtn = document.getElementById('bExitToWM');
+ if (_exitBtn) _exitBtn.style.display = 'none';
+}
 
 function updateSaveStatus(text, state) {
  const badge = $('#saveStatusBadge');

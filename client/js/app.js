@@ -322,36 +322,12 @@ class App {
     const netlabUrl = `/netlab/?projectId=${encodeURIComponent(pId)}&token=${encodeURIComponent(api.token || '')}`;
 
     overlay.innerHTML = `
-      <div class="netlab-topbar">
-        <div class="netlab-topbar-left">
-          <button type="button" class="btn netlab-btn-back" onclick="window.app.closeNetlab()" title="Lưu thay đổi và quay lại dự án">
-            ⬅ Quay lại dự án
-          </button>
-          <div class="netlab-topbar-title">
-            <span>🌐 NetLab Kho Thông Minh</span>
-            <span class="netlab-topbar-projname" title="${state.esc(projectName)}">${state.esc(projectName)}</span>
-          </div>
-        </div>
-        <div class="netlab-topbar-actions">
-          <button type="button" class="btn netlab-btn-action" onclick="window.app.toggleNetlabFullscreen()" title="Bật/Tắt toàn màn hình">
-            ⛶ Toàn màn hình
-          </button>
-          <a href="${state.esc(netlabUrl)}" target="_blank" rel="noopener" class="btn netlab-btn-action" title="Mở sơ đồ trong tab riêng">
-            ↗ Tab mới
-          </a>
-          <button type="button" class="btn netlab-btn-action" onclick="window.app.closeNetlab()" title="Đóng NetLab" style="color:#ef4444;font-weight:700">
-            ✕ Thoát
-          </button>
-        </div>
+      <div id="netlabLoadingCover" class="netlab-loading-cover">
+        <div class="netlab-spinner"></div>
+        <div style="font-size:14px;font-weight:600">Đang khởi tạo không gian thiết kế mạng NetLab...</div>
+        <div style="font-size:12px;opacity:0.8">${state.esc(projectName)}</div>
       </div>
-      <div class="netlab-iframe-container">
-        <div id="netlabLoadingCover" class="netlab-loading-cover">
-          <div class="netlab-spinner"></div>
-          <div style="font-size:14px;font-weight:600">Đang khởi tạo không gian thiết kế mạng NetLab...</div>
-          <div style="font-size:12px;opacity:0.8">${state.esc(projectName)}</div>
-        </div>
-        <iframe id="netlabIframe" class="netlab-iframe" src="${state.esc(netlabUrl)}" allow="clipboard-read; clipboard-write; fullscreen"></iframe>
-      </div>
+      <iframe id="netlabIframe" class="netlab-iframe" src="${state.esc(netlabUrl)}" allow="clipboard-read; clipboard-write; fullscreen"></iframe>
     `;
 
     overlay.style.display = 'flex';
