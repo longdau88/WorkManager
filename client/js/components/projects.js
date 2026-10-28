@@ -134,6 +134,12 @@ export function renderProjectHeader() {
   const mapStorageKey = 'wm.mapOpen_' + p.id;
   const isMapOpen = localStorage.getItem(mapStorageKey) !== 'false';
 
+  const netlabBtnHtml = `
+    <button type="button" class="btn btn-netlab-link" onclick="window.app.openNetlab('${p.id}')" title="Mở sơ đồ thiết kế mạng & thiết bị NetLab của dự án này">
+      🌐 Sơ đồ mạng NetLab
+    </button>
+  `;
+
   let mapToolbarHtml = '';
   let mapBoxHtml = '';
   if (embedUrl) {
@@ -145,6 +151,7 @@ export function renderProjectHeader() {
         <button type="button" class="btn btn-map-toggle" onclick="window.app.toggleProjectMap('${p.id}')" title="Ẩn/hiện bản đồ">
           ${isMapOpen ? '▾ Ẩn bản đồ' : '🗺 Xem nhanh'}
         </button>
+        ${netlabBtnHtml}
       </div>
     `;
     if (isMapOpen) {
@@ -154,12 +161,15 @@ export function renderProjectHeader() {
         </div>
       `;
     }
-  } else if (canManage) {
+  } else {
     mapToolbarHtml = `
       <div class="project-map-toolbar">
-        <button type="button" class="btn ghost btn-add-map-quick" onclick="window.app.openProjectModal('${p.id}', 'p_mapUrl')" title="Nhúng Google My Maps vào dự án này">
-          📍 + Thêm bản đồ vị trí (My Maps)
-        </button>
+        ${canManage ? `
+          <button type="button" class="btn ghost btn-add-map-quick" onclick="window.app.openProjectModal('${p.id}', 'p_mapUrl')" title="Nhúng Google My Maps vào dự án này">
+            📍 + Thêm bản đồ vị trí (My Maps)
+          </button>
+        ` : ''}
+        ${netlabBtnHtml}
       </div>
     `;
   }

@@ -300,6 +300,101 @@ class App {
     localStorage.setItem(k, !current);
     renderProjectHeader();
   }
+
+  // NetLab Integration: Mở màn hình thiết kế mạng & nạp CSDL tương ứng
+  openNetlab(projectId) {
+    const pId = projectId || state.curProject;
+    if (!pId || pId === 'all') {
+      state.toast('Vui lòng chọn một dự án cụ thể để mở NetLab', 'warn');
+      return;
+    }
+    const project = (state.data.projects || []).find(p => p.id === pId);
+    const projectName = project ? project.name : pId;
+
+    let overlay = document.getElementById('netlabOverlay');
+    if (!overlay) {
+      overlay = document.createElement('div');
+      overlay.id = 'netlabOverlay';
+      overlay.className = 'netlab-overlay';
+      document.body.appendChild(overlay);
+    }
+
+    const netlabUrl = `/netlab/?projectId=${encodeURIComponent(pId)}&token=${encodeURIComponent(api.token || '')}`;
+
+    overlay.innerHTML = `
+      <div class="netlab-topbar">
+        <div class="netlab-topbar-left">
+          <button type="button" class="btn netlab-btn-back" onclick="window.app.closeNetlab()" title="Lưu thay đổi và quay lại dự án">
+            ⬅ Quay lại dự án
+          </button>
+          <div class="netlab-topbar-title">
+            <span>🌐 NetLab Kho Thông Minh</span>
+            <span class="netlab-topbar-projname" title="${state.esc(projectName)}">${state.esc(projectName)}</span>
+          </div>
+        </div>
+        <div class="netlab-topbar-actions">
+          <button type="button" class="btn netlab-btn-action" onclick="window.app.toggleNetlabFullscreen()" title="Bật/Tắt toàn màn hình">
+            ⛶ Toàn màn hình
+          </button>
+          <a href="${state.esc(netlabUrl)}" target="_blank" rel="noopener" class="btn netlab-btn-action" title="Mở sơ đồ trong tab riêng">
+            ↗ Tab mới
+          </a>
+          <button type="button" class="btn netlab-btn-action" onclick="window.app.closeNetlab()" title="Đóng NetLab" style="color:#ef4444;font-weight:700">
+            ✕ Thoát
+          </button>
+        </div>
+      </div>
+      <div class="netlab-iframe-container">
+        <div id="netlabLoadingCover" class="netlab-loading-cover">
+          <div class="netlab-spinner"></div>
+          <div style="font-size:14px;font-weight:600">Đang khởi tạo không gian thiết kế mạng NetLab...</div>
+          <div style="font-size:12px;opacity:0.8">${state.esc(projectName)}</div>
+        </div>
+        <iframe id="netlabIframe" class="netlab-iframe" src="${state.esc(netlabUrl)}" allow="clipboard-read; clipboard-write; fullscreen"></iframe>
+      </div>
+    `;
+
+    overlay.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+
+    const iframe = overlay.querySelector('#netlabIframe');
+    const loader = overlay.querySelector('#netlabLoadingCover');
+    iframe.onload = () => {
+      setTimeout(() => {
+        if (loader) loader.style.opacity = '0';
+        setTimeout(() => loader && loader.remove(), 300);
+      }, 400);
+    };
+  }
+
+  closeNetlab() {
+    const overlay = document.getElementById('netlabOverlay');
+    if (!overlay) return;
+
+    // Gửi tín hiệu lưu và đóng cho iframe
+    const iframe = overlay.querySelector('#netlabIframe');
+    if (iframe && iframe.contentWindow) {
+      try {
+        iframe.contentWindow.postMessage({ type: 'NETLAB_SAVE_AND_CLOSE' }, '*');
+      } catch (e) {}
+    }
+
+    setTimeout(() => {
+      overlay.style.display = 'none';
+      overlay.innerHTML = '';
+      document.body.style.overflow = '';
+      state.toast('Đã quay lại dự án', 'info');
+      if (typeof window.renderAll === 'function') window.renderAll();
+    }, 150);
+  }
+
+  toggleNetlabFullscreen() {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch(() => {});
+    } else {
+      if (document.exitFullscreen) document.exitFullscreen().catch(() => {});
+    }
+  }
   closeProjectModal() { closeModalEl('modalProject'); }
   saveProjectModal() { modals.saveProject(); }
   deleteProjectModal() { modals.deleteProject(); }
@@ -665,3 +760,12 @@ class App {
 }
 
 window.app = new App();
+
+// Lắng nghe sự kiện thoát từ iframe NetLab để quay lại màn hình dự án
+window.addEventListener('message', (e) => {
+  if (e.data && e.data.type === 'NETLAB_CLOSE') {
+    if (window.app && typeof window.app.closeNetlab === 'function') {
+      window.app.closeNetlab();
+    }
+  }
+});

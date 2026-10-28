@@ -9,7 +9,14 @@ import { prisma, isPrismaConnected, readFallbackData } from '../config/db.js';
 export async function authenticate(req, res, next) {
   try {
     const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    let token = null;
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      token = authHeader.split(' ')[1];
+    } else if (req.query && req.query.token) {
+      token = req.query.token;
+    }
+
+    if (!token) {
       return res.status(401).json({
         status: 'error',
         message: 'Bạn chưa đăng nhập hoặc phiên làm việc đã hết hạn.',
@@ -17,7 +24,6 @@ export async function authenticate(req, res, next) {
       });
     }
 
-    const token = authHeader.split(' ')[1];
     let decoded;
     try {
       decoded = jwt.verify(token, env.jwtSecret);

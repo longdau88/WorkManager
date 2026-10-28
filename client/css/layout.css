@@ -223,6 +223,195 @@ main {
   color: var(--pri-500);
 }
 
+.btn-netlab-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--font-xs);
+  font-weight: 600;
+  padding: 6px 14px;
+  border-radius: var(--radius-full, 9999px);
+  background: linear-gradient(135deg, rgba(11, 94, 168, 0.12), rgba(58, 160, 255, 0.16));
+  border: 1px solid rgba(11, 94, 168, 0.35);
+  color: #0b5ea8;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.btn-netlab-link:hover {
+  background: linear-gradient(135deg, #0b5ea8, #1b74c4);
+  border-color: #0b5ea8;
+  color: #ffffff;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(11, 94, 168, 0.3);
+}
+
+[data-theme='dark'] .btn-netlab-link {
+  background: linear-gradient(135deg, rgba(58, 160, 255, 0.15), rgba(11, 94, 168, 0.25));
+  border-color: rgba(58, 160, 255, 0.4);
+  color: #60a5fa;
+}
+
+[data-theme='dark'] .btn-netlab-link:hover {
+  background: linear-gradient(135deg, #2563eb, #3b82f6);
+  color: #ffffff;
+}
+
+/* NetLab Integrated Fullscreen Overlay */
+.netlab-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  background: #0f172a;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: netlabFadeIn 0.2s ease-out;
+}
+
+@keyframes netlabFadeIn {
+  from { opacity: 0; transform: scale(0.99); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.netlab-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 16px;
+  background: #0f2a44;
+  color: #ffffff;
+  border-bottom: 1px solid #1e3a5f;
+  flex: none;
+  z-index: 10;
+}
+
+.netlab-topbar-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.netlab-topbar-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+  font-size: 14px;
+  color: #ffffff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.netlab-topbar-projname {
+  font-size: 13px;
+  font-weight: 500;
+  color: #93c5fd;
+  background: rgba(255, 255, 255, 0.08);
+  padding: 3px 8px;
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  max-width: 320px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.netlab-topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: none;
+}
+
+.netlab-btn-back {
+  background: #dc2626 !important;
+  border: 1px solid #ef4444 !important;
+  color: #ffffff !important;
+  font-weight: 700 !important;
+  padding: 5px 14px !important;
+  border-radius: 6px !important;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  box-shadow: 0 2px 6px rgba(220, 38, 38, 0.35);
+  transition: all 0.2s ease;
+}
+
+.netlab-btn-back:hover {
+  background: #b91c1c !important;
+  border-color: #dc2626 !important;
+  transform: translateY(-1px);
+}
+
+.netlab-btn-action {
+  background: #1e3a5f;
+  border: 1px solid #2d5584;
+  color: #e2e8f0;
+  padding: 5px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.15s ease;
+}
+
+.netlab-btn-action:hover {
+  background: #2b4c73;
+  color: #ffffff;
+}
+
+.netlab-iframe-container {
+  flex: 1;
+  width: 100%;
+  height: calc(100% - 48px);
+  position: relative;
+  background: #0f172a;
+}
+
+.netlab-iframe {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  display: block;
+}
+
+.netlab-loading-cover {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  background: #0f2a44;
+  color: #ffffff;
+  z-index: 5;
+  transition: opacity 0.3s ease;
+}
+
+.netlab-spinner {
+  width: 42px;
+  height: 42px;
+  border: 4px solid rgba(255, 255, 255, 0.15);
+  border-top-color: #38bdf8;
+  border-radius: 50%;
+  animation: netlabSpin 0.8s linear infinite;
+}
+
+@keyframes netlabSpin {
+  to { transform: rotate(360deg); }
+}
+
 .mapbox {
   position: relative;
   width: 100%;
@@ -1900,7 +2089,8 @@ main {
 
   .project-map-toolbar .btn-map-link,
   .project-map-toolbar .btn-map-toggle,
-  .project-map-toolbar .btn-add-map-quick {
+  .project-map-toolbar .btn-add-map-quick,
+  .project-map-toolbar .btn-netlab-link {
     flex: 1;
     justify-content: center;
     text-align: center;

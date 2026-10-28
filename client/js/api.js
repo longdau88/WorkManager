@@ -138,6 +138,17 @@ class ApiClient {
     });
   }
 
+  // Netlab Integration
+  getNetlab(projectId) {
+    return this.request(`/netlab/${projectId}`);
+  }
+  saveNetlab(projectId, data) {
+    return this.request(`/netlab/${projectId}`, {
+      method: 'PUT',
+      body: { data }
+    });
+  }
+
   // Users (Admin RBAC)
   getUsers() {
     return this.request('/users');

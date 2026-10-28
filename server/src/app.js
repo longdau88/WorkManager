@@ -48,9 +48,16 @@ app.use('/api', apiRoutes);
 const clientDir = path.resolve(__dirname, '../../client');
 app.use(express.static(clientDir));
 
+// Serve Netlab App directly
+const netlabDir = path.resolve(__dirname, '../../Netlab');
+app.use('/netlab', express.static(netlabDir));
+app.get('/netlab', (req, res) => {
+  res.sendFile(path.join(netlabDir, 'index.html'));
+});
+
 // Fallback to client/index.html for SPA routing if not an API request
 app.get('*', (req, res, next) => {
-  if (req.path.startsWith('/api')) {
+  if (req.path.startsWith('/api') || req.path.startsWith('/netlab')) {
     return next();
   }
   res.sendFile(path.join(clientDir, 'index.html'));

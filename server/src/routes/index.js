@@ -8,6 +8,7 @@ import memberRoutes from './member.routes.js';
 import fieldRoutes from './field.routes.js';
 import syncRoutes from './sync.routes.js';
 import uploadRoutes from './upload.routes.js';
+import netlabRoutes from './netlab.routes.js';
 import { getDbStatus } from '../config/db.js';
 
 const router = Router();
@@ -37,5 +38,6 @@ router.use('/members', memberRoutes);
 router.use('/fields', fieldRoutes);
 router.use('/sync', syncRoutes);
 router.use('/upload', uploadRoutes);
+router.use('/netlab', netlabRoutes);
 
 export default router;
