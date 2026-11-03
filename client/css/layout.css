@@ -2938,12 +2938,28 @@ main {
   }
 
   .header-right {
-    display: none;
+    display: none !important;
   }
 
   .header-menu-wrap {
-    display: block;
-    margin-left: auto;
+    display: block !important;
+    visibility: visible !important;
+    position: relative;
+    z-index: 100;
+    margin-left: auto !important;
+    flex: 0 0 42px !important;
+    width: 42px;
+  }
+
+  .header-menu-toggle {
+    display: inline-flex !important;
+    width: 42px;
+    height: 36px;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-primary);
+    background: var(--bg-surface);
+    border: 1px solid var(--border-light);
   }
 
   .header-nav .btn {
