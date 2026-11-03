@@ -183,16 +183,20 @@ main,#cv,#cv *{touch-action:none}
 
 @media (max-width: 900px){
  #app{display:flex;flex-direction:column;height:100vh;height:100dvh;overflow:hidden;position:relative}
- header{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding:5px 8px;gap:4px;flex:none;z-index:20}
- header::-webkit-scrollbar{display:none}
- header .logo{font-size:14px;margin-right:2px}
- header input.title{min-width:70px;max-width:115px;width:90px;flex:none;font-size:12px;padding:3px 6px}
+ header{flex-wrap:wrap;overflow:visible;padding:5px 8px;gap:4px;flex:none;z-index:20;align-content:center}
+ header .logo{font-size:14px;margin-right:2px;order:2}
+ header #bExitToWM{order:1}
+ header .proj-tag{order:3;max-width:150px}
+ header input.title{order:4;min-width:70px;max-width:115px;width:90px;flex:1 1 90px;font-size:12px;padding:3px 6px}
  .tb{padding:0 3px;flex:none}
  .tb button,.tb select{padding:4px 7px;font-size:11.5px;min-height:30px}
- .tb-project{display:flex!important;padding:0 2px;border-left:none;flex:none;gap:3px}
+ .tb-project{display:flex!important;order:5;padding:0 2px;border-left:none;flex:none;gap:3px}
  .tb-project button{padding:4px 7px;font-size:11.5px;min-height:30px;touch-action:manipulation}
+ header .save-badge{order:6}
  .mob-header-actions{display:none!important}
- .mob-btn-menu{display:flex!important;align-items:center;justify-content:center;background:#1b3d60;border:1px solid #2c5880;color:#fff;border-radius:6px;width:30px;height:30px;font-size:16px;cursor:pointer;flex:none;margin-left:auto;position:sticky;right:4px;z-index:5}
+ .mob-btn-menu{display:flex!important;order:7;align-items:center;justify-content:center;background:#1b3d60;border:1px solid #2c5880;color:#fff;border-radius:6px;width:34px;height:30px;font-size:16px;cursor:pointer;flex:none;margin-left:auto;z-index:5}
+ header>.tb:not(.tb-project){display:none!important}
+ .mob-menu-sheet{max-height:calc(100dvh - 24px);overflow-y:auto}
  main{flex:1;width:100%;height:100%;position:relative;overflow:hidden}
  aside.pal{position:fixed;top:0;left:0;bottom:0;width:min(340px,86vw);z-index:105;transform:translateX(-105%);transition:transform .26s cubic-bezier(0.16,1,0.3,1);box-shadow:4px 0 26px rgba(0,0,0,0.25);background:var(--panel);border-right:1px solid var(--line);padding:10px;overflow-y:auto;-webkit-overflow-scrolling:touch}
  aside.pal.mob-open{transform:translateX(0)}
@@ -227,6 +231,8 @@ main,#cv,#cv *{touch-action:none}
 }
 
 @media (max-width: 600px){
+ header #bExitToWM{font-size:0;padding:4px 7px!important}
+ header #bExitToWM::before{content:'⬅';font-size:15px}
  header input.title{width:80px;min-width:65px;max-width:95px;font-size:11.5px;padding:3px 4px}
  .tb-project button{padding:3px 5px;font-size:11px}
  .pal-grid{grid-template-columns:1fr 1fr 1fr}
@@ -2174,6 +2180,30 @@ function openMobMenu(){
     {label:'Thống kê hệ thống',icon:'📊',fn:()=>statsModal()},
     {label:'Danh sách quản lý (Host/IP/Tem)',icon:'📋',fn:()=>listModal()},
     {label:'Bảng thiết bị & Đấu nối IP',icon:'▤',fn:()=>inventory()}
+   ]
+  },
+  {
+   title:'⚡ Vẽ & Chỉnh sửa',
+   items:[
+    {label:'Chọn / Di chuyển',icon:'↖',fn:()=>setMode('select')},
+    {label:'Nối cáp',icon:'⚡',fn:()=>setMode('connect')},
+    {label:'Vẽ vùng',icon:'▭',fn:()=>setMode('zone')},
+    {label:'Ghi chú',icon:'T',fn:()=>setMode('text')},
+    {label:'Ping nhanh',icon:'✉',fn:()=>setMode('pdu')},
+    {label:'Thêm vùng nhanh',icon:'＋',fn:()=>addZone()},
+    {label:'Hoàn tác',icon:'↶',fn:()=>undo()},
+    {label:'Làm lại',icon:'↷',fn:()=>redo()},
+    {label:'Xóa đối tượng',icon:'🗑',fn:()=>delSel()}
+   ]
+  },
+  {
+   title:'🔍 Hiển thị & Thu phóng',
+   items:[
+    {label:'Thu nhỏ',icon:'−',fn:()=>$('#bZo').click()},
+    {label:'Vừa màn hình',icon:'⤢',fn:()=>fit()},
+    {label:'Phóng to',icon:'＋',fn:()=>$('#bZi').click()},
+    {label:'Tỉ lệ 100%',icon:'1:1',fn:()=>zoom100()},
+    {label:'Tới đối tượng chọn',icon:'⌖',fn:()=>zoomSel()}
    ]
   },
   {
