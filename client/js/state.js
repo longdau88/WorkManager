@@ -1,5 +1,6 @@
 import { CONFIG } from './config.js';
 import { api } from './api.js';
+import { loadNavigationState } from './navigation.js';
 
 export class StateManager {
   constructor() {
@@ -16,13 +17,14 @@ export class StateManager {
     this.flushTimer = null;
     this.syncWatchdog = null;
 
-    this.curProject = 'all';
-    this.curFilter = 'all';
-    this.curPtab = 'tasks'; // 'tasks' | 'diary' | 'ledger' | 'labor' | 'contract' | 'device' | 'qa' | 'finance'
-    this.searchQuery = '';
-    this.assigneeFilter = '';
-    this.sortMode = 'manual';
-    this.view = 'tasks'; // 'tasks' | 'stats'
+    const navigation = loadNavigationState();
+    this.curProject = navigation.project;
+    this.curFilter = navigation.filter;
+    this.curPtab = navigation.projectTab; // 'tasks' | 'diary' | 'ledger' | 'labor' | 'contract' | 'device' | 'qa' | 'finance'
+    this.searchQuery = navigation.search;
+    this.assigneeFilter = navigation.assignee;
+    this.sortMode = navigation.sort;
+    this.view = navigation.view; // 'tasks' | 'stats'
     this.theme = localStorage.getItem('wm.theme') || 'system';
 
     this.collapsed = {};

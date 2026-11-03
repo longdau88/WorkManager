@@ -1,6 +1,7 @@
 import { state } from './state.js';
 import { api } from './api.js';
 import { CONFIG } from './config.js';
+import { saveNavigationState } from './navigation.js';
 import { renderProjectsSidebar, renderProjectHeader } from './components/projects.js';
 import { renderTasksMain } from './components/tasks.js';
 import { renderStatsView, exportStatsCsv } from './components/stats.js';
@@ -276,6 +277,7 @@ class App {
     if (searchInput) {
       searchInput.addEventListener('input', e => {
         state.searchQuery = e.target.value;
+        saveNavigationState(state);
         renderTasksMain();
       });
     }
@@ -285,6 +287,7 @@ class App {
     if (sortSelect) {
       sortSelect.addEventListener('change', e => {
         state.sortMode = e.target.value;
+        saveNavigationState(state);
         renderTasksMain();
       });
     }
@@ -294,6 +297,7 @@ class App {
     if (assigneeSelect) {
       assigneeSelect.addEventListener('change', e => {
         state.assigneeFilter = e.target.value;
+        saveNavigationState(state);
         renderTasksMain();
       });
     }
@@ -333,6 +337,11 @@ class App {
     if (btnNavTasks) btnNavTasks.classList.toggle('active', state.view === 'tasks');
     if (btnNavStats) btnNavStats.classList.toggle('active', state.view === 'stats');
 
+    const searchInput = document.getElementById('searchTasks');
+    const sortSelect = document.getElementById('sortTasks');
+    if (searchInput && searchInput.value !== state.searchQuery) searchInput.value = state.searchQuery;
+    if (sortSelect && sortSelect.value !== state.sortMode) sortSelect.value = state.sortMode;
+
     if (state.view === 'tasks') {
       renderProjectHeader();
       renderProjectTabs();
@@ -367,6 +376,7 @@ class App {
   // Navigation
   setView(viewKey) {
     state.view = viewKey;
+    saveNavigationState(state);
     this.render();
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
@@ -377,12 +387,14 @@ class App {
     }
     state.curProject = id;
     state.view = 'tasks';
+    saveNavigationState(state);
     this.render();
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
   setPtab(ptabKey) {
     state.curPtab = ptabKey;
+    saveNavigationState(state);
     this.render();
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
@@ -407,6 +419,7 @@ class App {
 
   setFilter(filterKey) {
     state.curFilter = filterKey;
+    saveNavigationState(state);
     renderTasksMain();
   }
 
@@ -443,6 +456,7 @@ class App {
 
   setAssigneeFilter(email) {
     state.assigneeFilter = email || '';
+    saveNavigationState(state);
     const sel = document.getElementById('assigneeFilter');
     if (sel) sel.value = state.assigneeFilter;
     renderTasksMain();
