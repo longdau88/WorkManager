@@ -100,6 +100,34 @@ header {
   font-size: var(--font-xs);
 }
 
+.user-notice {
+  position: fixed;
+  top: 76px;
+  right: 18px;
+  z-index: 120;
+  max-width: min(420px, calc(100vw - 36px));
+  padding: 11px 15px;
+  border: 1px solid color-mix(in srgb, var(--success-main) 35%, var(--border-light));
+  border-radius: var(--radius-md);
+  background: var(--bg-surface);
+  color: var(--success-main);
+  box-shadow: var(--shadow-modal);
+  opacity: 0;
+  transform: translateY(-8px);
+  pointer-events: none;
+  transition: opacity .2s ease, transform .2s ease;
+}
+
+.user-notice.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.user-notice.error {
+  border-color: color-mix(in srgb, var(--danger-main) 35%, var(--border-light));
+  color: var(--danger-main);
+}
+
 .header-action-status {
   color: var(--text-muted);
   font-size: var(--font-xs);

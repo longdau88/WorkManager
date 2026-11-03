@@ -250,6 +250,21 @@ class App {
     this.actionStatusTimer = setTimeout(() => { element.textContent = ''; }, 5000);
   }
 
+  showUserNotice(message, isError = false) {
+    let notice = document.getElementById('userNotice');
+    if (!notice) {
+      notice = document.createElement('div');
+      notice.id = 'userNotice';
+      notice.className = 'user-notice';
+      document.body.appendChild(notice);
+    }
+    notice.textContent = message;
+    notice.classList.toggle('error', isError);
+    notice.classList.add('visible');
+    clearTimeout(this.userNoticeTimer);
+    this.userNoticeTimer = setTimeout(() => notice.classList.remove('visible'), 3500);
+  }
+
   openReportExportModal(projectId) {
     state.curProject = projectId || state.curProject;
     const project = state.projById(state.curProject);
@@ -855,6 +870,7 @@ class App {
     const candidates = state.data.workers.filter(w => String(w.active) !== 'false' && !existingWorkerIds.has(w.id));
 
     if (!candidates.length) {
+      v8Modals.v8Edit.addToLabor = { projectId: state.curProject, month: curM };
       this.openWorkerModal();
       return;
     }
@@ -866,7 +882,7 @@ class App {
     const idx = parseInt(input, 10) - 1;
     if (idx >= 0 && idx < candidates.length) {
       const target = candidates[idx];
-      state.commit('labor', {
+      const added = state.commit('labor', {
         id: state.uid(),
         projectId: state.curProject,
         month: curM,
@@ -882,6 +898,10 @@ class App {
         createdAt: Date.now(),
         deleted: false
       });
+      if (added) this.showUserNotice(`Đã thêm ${target.name} vào bảng chấm công tháng ${state.monthLabel(curM)}.`);
+      else this.showUserNotice('Không thể thêm nhân công vào bảng chấm công.', true);
+    } else {
+      this.showUserNotice('Số thứ tự nhân công không hợp lệ.', true);
     }
   }
   removeLaborRow(laborId) {

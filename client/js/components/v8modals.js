@@ -20,6 +20,7 @@ export const v8Edit = {
   ledgerKind: 'chi',
   ledgerFiles: [],
   workerId: null,
+  addToLabor: null,
   advanceId: null,
   advanceKind: 'salary',
   advanceFiles: [],
@@ -381,6 +382,7 @@ export function deleteLedger() {
 // ==========================================
 export function openWorkerModal(id) {
   v8Edit.workerId = id || null;
+  if (id) v8Edit.addToLabor = null;
   const w = id ? state.data.workers.find(x => x.id === id) : null;
 
   document.getElementById('wTitle').textContent = w ? `Nhân công: ${w.name}` : 'Thêm nhân công mới';
@@ -423,7 +425,36 @@ export function saveWorker() {
     deleted: false
   };
 
-  state.commit('worker', record);
+  const workerSaved = state.commit('worker', record);
+  const laborContext = v8Edit.addToLabor;
+  if (!workerSaved) {
+    window.app?.showUserNotice('Không thể lưu nhân công.', true);
+  } else if (!v8Edit.workerId && laborContext) {
+    const laborAdded = state.commit('labor', {
+      id: state.uid(),
+      projectId: laborContext.projectId,
+      month: laborContext.month,
+      workerId: record.id,
+      days: {},
+      ot: {},
+      rate: record.rate || 0,
+      payType: record.payType || 'day',
+      stdDays: 26,
+      allowance: 0,
+      bonus: 0,
+      deduction: 0,
+      createdAt: Date.now(),
+      deleted: false
+    });
+    v8Edit.addToLabor = null;
+    if (laborAdded) {
+      window.app?.showUserNotice(`Đã thêm ${record.name} vào danh sách nhân công và bảng chấm công.`);
+    } else {
+      window.app?.showUserNotice(`Đã lưu ${record.name}, nhưng không thể thêm vào bảng chấm công.`, true);
+    }
+  } else {
+    window.app?.showUserNotice(existing ? `Đã cập nhật nhân công ${record.name}.` : `Đã thêm nhân công ${record.name}.`);
+  }
   hideModal('modalWorker');
 }
 
