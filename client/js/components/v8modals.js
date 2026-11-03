@@ -417,7 +417,7 @@ export function saveWorker() {
     rate: parseFloat(document.getElementById('w_rate').value.replace(/[^\d]/g, '')) || 0,
     bank: document.getElementById('w_bank').value.trim(),
     note: document.getElementById('w_note').value.trim(),
-    active: document.getElementById('w_active').checked ? 'true' : 'false',
+    active: document.getElementById('w_active').checked,
     createdBy: existing ? existing.createdBy : user,
     createdAt: existing ? existing.createdAt : Date.now(),
     deleted: false

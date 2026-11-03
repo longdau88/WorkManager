@@ -100,6 +100,11 @@ function sanitizeForPrisma(type, r) {
   if ('receivedAmount' in out) out.receivedAmount = out.receivedAmount !== null && out.receivedAmount !== '' ? Number(out.receivedAmount) || 0 : null;
   if ('sort' in out) out.sort = Number(out.sort) || 10;
   if ('deleted' in out) out.deleted = Boolean(out.deleted);
+  if ('active' in out) {
+    out.active = typeof out.active === 'string'
+      ? out.active.toLowerCase() === 'true'
+      : Boolean(out.active);
+  }
 
   // JSON fields handling
   const jsonFields = ['tasks', 'quantities', 'labor', 'machines', 'materials', 'files', 'days', 'ot', 'items', 'statusLog'];
