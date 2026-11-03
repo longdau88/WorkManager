@@ -2819,6 +2819,97 @@ main {
   color: #444;
 }
 
+/* Narrow screens: keep every primary action reachable by horizontal scrolling. */
+@media (max-width: 992px) {
+  header {
+    justify-content: flex-start;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: thin;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  header > .brand,
+  header > .header-nav,
+  header > .header-right {
+    flex: 0 0 auto;
+  }
+
+  .header-nav {
+    flex: 0 0 auto;
+  }
+
+  .header-right {
+    margin-left: 0;
+  }
+
+  header::-webkit-scrollbar {
+    height: 4px;
+  }
+
+  header::-webkit-scrollbar-thumb {
+    background: var(--border-strong);
+    border-radius: 4px;
+  }
+
+  main {
+    overflow-x: auto;
+  }
+
+  #pageTasks,
+  #pageStats {
+    min-width: 0;
+  }
+
+  .phead-card,
+  .project-map-toolbar,
+  .project-members-bar {
+    max-width: none;
+  }
+
+  .project-map-toolbar {
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    padding-bottom: 4px;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .project-map-toolbar > .btn {
+    flex: 0 0 auto;
+  }
+}
+
+@media (max-width: 768px) {
+  header {
+    min-height: 48px;
+  }
+
+  .header-nav .btn {
+    min-width: max-content;
+  }
+
+  .header-nav .btn span {
+    display: inline;
+  }
+
+  .header-right {
+    min-width: max-content;
+  }
+
+  .user-badge {
+    max-width: 150px;
+  }
+
+  .toolbar {
+    overflow-x: visible;
+  }
+
+  .toolbar .btn {
+    flex: 0 1 auto;
+  }
+}
+
 @media print {
   body>*:not(#printArea) {
     display: none !important;
