@@ -2875,16 +2875,17 @@ main {
   header {
     justify-content: flex-start;
     flex-wrap: nowrap;
-    overflow-x: auto;
-    overflow-y: hidden;
-    scrollbar-width: thin;
-    -webkit-overflow-scrolling: touch;
+    overflow: visible;
   }
 
   header > .brand,
   header > .header-nav,
   header > .header-right {
     flex: 0 0 auto;
+  }
+
+  header > .header-right {
+    display: none !important;
   }
 
   .header-nav {
@@ -2895,13 +2896,25 @@ main {
     margin-left: 0;
   }
 
-  header::-webkit-scrollbar {
-    height: 4px;
+  .header-menu-wrap {
+    display: block !important;
+    visibility: visible !important;
+    position: relative;
+    z-index: 100;
+    margin-left: auto !important;
+    flex: 0 0 42px !important;
+    width: 42px;
   }
 
-  header::-webkit-scrollbar-thumb {
-    background: var(--border-strong);
-    border-radius: 4px;
+  .header-menu-toggle {
+    display: inline-flex !important;
+    width: 42px;
+    height: 36px;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-primary);
+    background: var(--bg-surface);
+    border: 1px solid var(--border-light);
   }
 
   main {
@@ -2935,31 +2948,6 @@ main {
   header {
     min-height: 48px;
     overflow: visible;
-  }
-
-  .header-right {
-    display: none !important;
-  }
-
-  .header-menu-wrap {
-    display: block !important;
-    visibility: visible !important;
-    position: relative;
-    z-index: 100;
-    margin-left: auto !important;
-    flex: 0 0 42px !important;
-    width: 42px;
-  }
-
-  .header-menu-toggle {
-    display: inline-flex !important;
-    width: 42px;
-    height: 36px;
-    align-items: center;
-    justify-content: center;
-    color: var(--text-primary);
-    background: var(--bg-surface);
-    border: 1px solid var(--border-light);
   }
 
   .header-nav .btn {
