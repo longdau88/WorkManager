@@ -2898,8 +2898,8 @@ main {
   color: #444;
 }
 
-/* Narrow screens: keep every primary action reachable by horizontal scrolling. */
-@media (max-width: 992px) {
+/* Narrow screens: keep every primary action reachable without header overflow. */
+@media (max-width: 1100px) {
   header {
     justify-content: flex-start;
     flex-wrap: nowrap;
