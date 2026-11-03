@@ -35,6 +35,7 @@ class App {
     } else {
       // Initial Render & Bootstrap
       this.render();
+      if (state.netlabOpen && state.curProject !== 'all') this.openNetlab(state.curProject);
       state.flush();
       this.startRealtime();
       this.startPresence();
@@ -556,6 +557,10 @@ class App {
     }
     const project = (state.data.projects || []).find(p => p.id === pId);
     const projectName = project ? project.name : pId;
+    state.curProject = pId;
+    state.view = 'tasks';
+    state.netlabOpen = true;
+    saveNavigationState(state);
 
     let overlay = document.getElementById('netlabOverlay');
     if (!overlay) {
@@ -604,6 +609,8 @@ class App {
   closeNetlab() {
     const overlay = document.getElementById('netlabOverlay');
     if (!overlay) return;
+    state.netlabOpen = false;
+    saveNavigationState(state);
 
     // Gửi tín hiệu lưu và đóng cho iframe
     const iframe = overlay.querySelector('#netlabIframe');

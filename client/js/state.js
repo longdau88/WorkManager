@@ -25,6 +25,7 @@ export class StateManager {
     this.assigneeFilter = navigation.assignee;
     this.sortMode = navigation.sort;
     this.view = navigation.view; // 'tasks' | 'stats'
+    this.netlabOpen = navigation.netlabOpen;
     this.theme = localStorage.getItem('wm.theme') || 'system';
 
     this.collapsed = {};

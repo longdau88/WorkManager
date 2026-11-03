@@ -7,7 +7,8 @@ const DEFAULT_NAVIGATION = {
   filter: 'all',
   search: '',
   assignee: '',
-  sort: 'manual'
+  sort: 'manual',
+  netlabOpen: false
 };
 
 function isNonEmptyString(value) {
@@ -19,7 +20,7 @@ function readUrlNavigation() {
   if (!hash) return {};
 
   const params = new URLSearchParams(hash);
-  if (!params.has('screen') && !params.has('project') && !params.has('tab')) return {};
+  if (!params.has('screen') && !params.has('project') && !params.has('tab') && !params.has('netlab')) return {};
 
   return {
     view: params.get('screen') || undefined,
@@ -28,7 +29,8 @@ function readUrlNavigation() {
     filter: params.get('filter') || undefined,
     search: params.get('search') || undefined,
     assignee: params.get('assignee') || undefined,
-    sort: params.get('sort') || undefined
+    sort: params.get('sort') || undefined,
+    netlabOpen: params.get('netlab') === '1'
   };
 }
 
@@ -46,7 +48,8 @@ export function loadNavigationState() {
       filter: isNonEmptyString(source.filter) ? source.filter : 'all',
       search: typeof source.search === 'string' ? source.search : '',
       assignee: typeof source.assignee === 'string' ? source.assignee : '',
-      sort: isNonEmptyString(source.sort) ? source.sort : 'manual'
+        sort: isNonEmptyString(source.sort) ? source.sort : 'manual',
+        netlabOpen: source.netlabOpen === true || source.netlabOpen === 'true'
     };
   } catch (error) {
     console.warn('Could not read navigation state:', error);
@@ -62,7 +65,8 @@ export function saveNavigationState(state) {
     filter: state.curFilter,
     search: state.searchQuery,
     assignee: state.assigneeFilter,
-    sort: state.sortMode
+    sort: state.sortMode,
+    netlabOpen: state.netlabOpen === true
   };
 
   try {
@@ -74,7 +78,8 @@ export function saveNavigationState(state) {
       filter: navigation.filter,
       search: navigation.search,
       assignee: navigation.assignee,
-      sort: navigation.sort
+      sort: navigation.sort,
+      netlab: navigation.netlabOpen ? '1' : '0'
     });
     const nextUrl = `${window.location.pathname}${window.location.search}#${params.toString()}`;
     window.history.replaceState(null, '', nextUrl);
