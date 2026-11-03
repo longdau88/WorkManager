@@ -49,6 +49,57 @@ header {
   gap: var(--space-1);
 }
 
+.header-menu-wrap {
+  position: relative;
+  display: none;
+  flex: 0 0 auto;
+}
+
+.header-menu-toggle {
+  min-width: 38px;
+  padding: 6px 9px;
+  font-size: 18px;
+}
+
+.header-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 90;
+  min-width: 220px;
+  padding: 6px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-modal);
+}
+
+.header-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 9px 10px;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--text-primary);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.header-menu-item:hover {
+  background: var(--bg-hover);
+}
+
+.header-menu-count {
+  margin-left: auto;
+  color: var(--text-muted);
+  font-size: var(--font-xs);
+}
+
 .header-action-status {
   color: var(--text-muted);
   font-size: var(--font-xs);
@@ -2883,6 +2934,16 @@ main {
 @media (max-width: 768px) {
   header {
     min-height: 48px;
+    overflow: visible;
+  }
+
+  .header-right {
+    display: none;
+  }
+
+  .header-menu-wrap {
+    display: block;
+    margin-left: auto;
   }
 
   .header-nav .btn {
@@ -2907,6 +2968,16 @@ main {
 
   .toolbar .btn {
     flex: 0 1 auto;
+  }
+}
+
+@media (max-width: 380px) {
+  .header-nav .btn span {
+    display: none;
+  }
+
+  .header-nav .btn {
+    min-width: 34px;
   }
 }
 

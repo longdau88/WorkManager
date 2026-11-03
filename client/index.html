@@ -22,7 +22,7 @@
   <link rel="stylesheet" href="css/variables.css?v=20261028_v2">
   <link rel="stylesheet" href="css/base.css?v=20261028_v2">
   <link rel="stylesheet" href="css/components.css?v=20261028_v2">
-  <link rel="stylesheet" href="css/layout.css?v=20261103_v1">
+  <link rel="stylesheet" href="css/layout.css?v=20261103_v2">
   <link rel="stylesheet" href="css/animations.css?v=20261028_v2">
 </head>
 
@@ -61,6 +61,27 @@
       <button class="btn ghost" id="btnSyncNow" onclick="window.app.flushSync()" title="Đồng bộ ngay">⟳</button>
       <button class="btn ghost" id="btnThemeToggle" onclick="window.app.toggleTheme()"
         title="Đổi giao diện Sáng / Tối">🌙</button>
+    </div>
+    <div class="header-menu-wrap">
+      <button class="btn ghost header-menu-toggle" id="btnHeaderMenu" onclick="window.app.toggleHeaderMenu()"
+        title="Thêm chức năng" aria-label="Thêm chức năng" aria-expanded="false">☰</button>
+      <div class="header-menu" id="headerMenu" hidden>
+        <button type="button" class="header-menu-item" onclick="window.app.showNotifications();window.app.closeHeaderMenu()">
+          🔔 Thông báo <span class="header-menu-count" id="menuNotificationCount">0</span>
+        </button>
+        <button type="button" class="header-menu-item" onclick="window.app.showOnlineUsers();window.app.closeHeaderMenu()">
+          🟢 Người dùng online <span class="header-menu-count" id="menuOnlineCount">0</span>
+        </button>
+        <button type="button" class="header-menu-item" onclick="window.app.flushSync();window.app.closeHeaderMenu()">
+          ⟳ Đồng bộ ngay
+        </button>
+        <button type="button" class="header-menu-item" onclick="window.app.toggleTheme();window.app.closeHeaderMenu()">
+          🌙 Đổi giao diện
+        </button>
+        <button type="button" class="header-menu-item" id="menuLogout" onclick="window.app.logout();window.app.closeHeaderMenu()">
+          🚪 Đăng xuất
+        </button>
+      </div>
     </div>
   </header>
 

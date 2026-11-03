@@ -99,6 +99,8 @@ class App {
     const count = state.data.notifications.filter(item => !item.readAt).length;
     const element = document.getElementById('notificationCount');
     if (element) element.textContent = String(count);
+    const menuElement = document.getElementById('menuNotificationCount');
+    if (menuElement) menuElement.textContent = String(count);
   }
 
   updateOnlineCount() {
@@ -106,6 +108,8 @@ class App {
     const online = state.data.presence.filter(item => new Date(item.lastSeen).getTime() >= cutoff);
     const element = document.getElementById('onlineCount');
     if (element) element.textContent = String(new Set(online.map(item => item.userId)).size);
+    const menuElement = document.getElementById('menuOnlineCount');
+    if (menuElement) menuElement.textContent = String(new Set(online.map(item => item.userId)).size);
   }
 
   mergePresence(record) {
@@ -211,6 +215,21 @@ class App {
     ['notificationPopover', 'onlinePopover'].forEach(id => { const element = document.getElementById(id); if (element) element.hidden = true; });
   }
 
+  toggleHeaderMenu() {
+    const menu = document.getElementById('headerMenu');
+    const button = document.getElementById('btnHeaderMenu');
+    if (!menu || !button) return;
+    menu.hidden = !menu.hidden;
+    button.setAttribute('aria-expanded', String(!menu.hidden));
+  }
+
+  closeHeaderMenu() {
+    const menu = document.getElementById('headerMenu');
+    const button = document.getElementById('btnHeaderMenu');
+    if (menu) menu.hidden = true;
+    if (button) button.setAttribute('aria-expanded', 'false');
+  }
+
   positionHeaderPopover(popover, trigger) {
     if (!popover || !trigger) return;
     const rect = trigger.getBoundingClientRect();
@@ -269,8 +288,12 @@ class App {
       const onlinePopover = document.getElementById('onlinePopover');
       const notificationButton = document.getElementById('btnNotifications');
       const onlineButton = document.getElementById('btnOnlineUsers');
+      const headerMenu = document.getElementById('headerMenu');
+      const headerMenuButton = document.getElementById('btnHeaderMenu');
       const insidePopover = notificationPopover?.contains(target) || onlinePopover?.contains(target);
       const onTrigger = notificationButton?.contains(target) || onlineButton?.contains(target);
+      const insideHeaderMenu = headerMenu?.contains(target) || headerMenuButton?.contains(target);
+      if (!insideHeaderMenu) this.closeHeaderMenu();
       if (!insidePopover && !onTrigger) this.closeHeaderPopovers();
     });
 
@@ -364,9 +387,13 @@ class App {
         userBadgeEl.innerHTML = `👤 <b>${state.esc(u.fullName || u.username)}</b> <span class="badge ${u.isAdmin ? 'b-blue' : 'b-gray'}" style="margin-left:4px;font-size:11px">${state.esc(u.roleDisplayName || 'Thành viên')}</span>`;
         userBadgeEl.title = `Đang đăng nhập: ${u.username} (${u.email})`;
         if (btnLogoutEl) btnLogoutEl.style.display = '';
+        const menuLogoutEl = document.getElementById('menuLogout');
+        if (menuLogoutEl) menuLogoutEl.style.display = '';
       } else {
         userBadgeEl.textContent = 'Chưa đăng nhập';
         if (btnLogoutEl) btnLogoutEl.style.display = 'none';
+        const menuLogoutEl = document.getElementById('menuLogout');
+        if (menuLogoutEl) menuLogoutEl.style.display = 'none';
       }
     }
 
