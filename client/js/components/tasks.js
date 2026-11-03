@@ -242,9 +242,8 @@ function renderAssigneeFilter(scope) {
   });
 
   sel.innerHTML = options.join('');
-  if ([...sel.options].some(o => o.value === currentVal)) {
-    sel.value = currentVal;
-  }
+  const selectedValue = currentVal || state.assigneeFilter;
+  if ([...sel.options].some(o => o.value === selectedValue)) sel.value = selectedValue;
 }
 
 function setupSortables(enable) {

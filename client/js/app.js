@@ -27,6 +27,7 @@ class App {
 
     // Bind Event Listeners
     this.bindEvents();
+    saveNavigationState(state);
 
     // Check Authentication
     if (!api.token) {
