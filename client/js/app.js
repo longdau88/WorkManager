@@ -552,7 +552,7 @@ class App {
   openNetlab(projectId) {
     const pId = projectId || state.curProject;
     if (!pId || pId === 'all') {
-      state.toast('Vui lòng chọn một dự án cụ thể để mở NetLab', 'warn');
+      this.showActionStatus('Vui lòng chọn một dự án cụ thể để mở NetLab', true);
       return;
     }
     const project = (state.data.projects || []).find(p => p.id === pId);
@@ -560,6 +560,7 @@ class App {
     state.curProject = pId;
     state.view = 'tasks';
     state.netlabOpen = true;
+    this.netlabClosing = false;
     saveNavigationState(state);
 
     let overlay = document.getElementById('netlabOverlay');
@@ -608,7 +609,8 @@ class App {
 
   closeNetlab() {
     const overlay = document.getElementById('netlabOverlay');
-    if (!overlay) return;
+    if (!overlay || this.netlabClosing) return;
+    this.netlabClosing = true;
     state.netlabOpen = false;
     saveNavigationState(state);
 
@@ -624,7 +626,8 @@ class App {
       overlay.style.display = 'none';
       overlay.innerHTML = '';
       document.body.style.overflow = '';
-      state.toast('Đã quay lại dự án', 'info');
+      this.netlabClosing = false;
+      this.showActionStatus('Đã quay lại dự án');
       if (typeof window.renderAll === 'function') window.renderAll();
     }, 150);
   }
