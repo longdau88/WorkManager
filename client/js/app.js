@@ -553,12 +553,24 @@ class App {
     const netlabUrl = `/netlab/?projectId=${encodeURIComponent(pId)}&token=${encodeURIComponent(api.token || '')}`;
 
     overlay.innerHTML = `
-      <div id="netlabLoadingCover" class="netlab-loading-cover">
-        <div class="netlab-spinner"></div>
-        <div style="font-size:14px;font-weight:600">Đang khởi tạo không gian thiết kế mạng NetLab...</div>
-        <div style="font-size:12px;opacity:0.8">${state.esc(projectName)}</div>
+      <div class="netlab-topbar">
+        <div class="netlab-topbar-left">
+          <div class="netlab-topbar-title">🌐 Sơ đồ mạng NetLab</div>
+          <div class="netlab-topbar-projname" title="${state.esc(projectName)}">${state.esc(projectName)}</div>
+        </div>
+        <div class="netlab-topbar-actions">
+          <button type="button" class="netlab-btn-back" onclick="window.app.closeNetlab()"
+            title="Lưu thay đổi và quay lại dự án">⬅ Quay lại dự án</button>
+        </div>
       </div>
-      <iframe id="netlabIframe" class="netlab-iframe" src="${state.esc(netlabUrl)}" allow="clipboard-read; clipboard-write; fullscreen"></iframe>
+      <div class="netlab-iframe-container">
+        <div id="netlabLoadingCover" class="netlab-loading-cover">
+          <div class="netlab-spinner"></div>
+          <div style="font-size:14px;font-weight:600">Đang khởi tạo không gian thiết kế mạng NetLab...</div>
+          <div style="font-size:12px;opacity:0.8">${state.esc(projectName)}</div>
+        </div>
+        <iframe id="netlabIframe" class="netlab-iframe" src="${state.esc(netlabUrl)}" allow="clipboard-read; clipboard-write; fullscreen"></iframe>
+      </div>
     `;
 
     overlay.style.display = 'flex';
