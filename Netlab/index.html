@@ -531,11 +531,21 @@ async function saveToDb(immediate = false) {
   const headers = { 'Content-Type': 'application/json' };
   if (NETLAB_TOKEN) headers['Authorization'] = `Bearer ${NETLAB_TOKEN}`;
 
-  const res = await fetch(`/api/netlab/${encodeURIComponent(NETLAB_PID)}`, {
+  const endpoint = `/api/netlab/${encodeURIComponent(NETLAB_PID)}`;
+  let res = await fetch(endpoint, {
    method: 'PUT',
    headers,
    body: JSON.stringify({ data: payload })
   });
+
+  // Một số deployment cũ chỉ expose POST cho endpoint lưu NetLab.
+  if (res.status === 404 || res.status === 405) {
+   res = await fetch(endpoint, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({ data: payload })
+   });
+  }
 
   if (!res.ok) {
    const errData = await res.json().catch(() => null);

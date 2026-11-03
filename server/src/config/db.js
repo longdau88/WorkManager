@@ -281,10 +281,15 @@ export async function initDatabase() {
         throw new Error('DATABASE_URL is not set in environment');
       }
 
-      // Giới hạn connection pool cho AlwaysData MySQL (max 3 connections) để tránh lỗi 1203 max_user_connections
-      if (!dbUrl.includes('connection_limit=')) {
-        const sep = dbUrl.includes('?') ? '&' : '?';
-        dbUrl = `${dbUrl}${sep}connection_limit=3&pool_timeout=10`;
+      // Serverless có thể tạo nhiều instance, nên mỗi Prisma client chỉ giữ 1 connection.
+      const separator = dbUrl.includes('?') ? '&' : '?';
+      if (/connection_limit=\d+/i.test(dbUrl)) {
+        dbUrl = dbUrl.replace(/connection_limit=\d+/i, 'connection_limit=1');
+      } else {
+        dbUrl = `${dbUrl}${separator}connection_limit=1`;
+      }
+      if (!/pool_timeout=\d+/i.test(dbUrl)) {
+        dbUrl += '&pool_timeout=20';
       }
 
       if (!prisma) {
